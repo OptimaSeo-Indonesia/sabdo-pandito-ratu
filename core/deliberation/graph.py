@@ -61,7 +61,11 @@ class DeliberationGraph:
         inference_registry: InferenceRegistry | None = None,
         selection_engine: BackendSelector | None = None,
         analyzer: ContextAnalyzer | None = None,
+        mode: str = "standard",
     ):
+        if mode not in ("dry_run", "standard", "full_llm"):
+            raise ValueError(f"Unknown mode '{mode}'. Use 'dry_run', 'standard', or 'full_llm'.")
+        self.mode = mode
         self.registry = registry or AdvisorRegistry()
         self.evaluator = evaluator or AdvisorEvaluator()
         self.principles = principle_engine or PrincipleEngine()
@@ -104,54 +108,47 @@ class DeliberationGraph:
 
         return workflow.compile()
 
-    def _begin_step(self, state: DeliberationState, name: str) -> dict:
+    def _track_step(self, state: DeliberationState, name: str) -> dict:
         now = datetime.now(timezone.utc)
-        step = DeliberationStep(name=name, status="in_progress", started_at=now)
+        step = DeliberationStep(name=name, status="completed", started_at=now, completed_at=now)
         steps = list(state.steps) + [step]
-        completed = len([s for s in steps if s.status == "completed"])
-        return {
-            "steps": [s.model_dump() for s in steps],
-            "current_step": name,
-            "steps_completed": completed,
-            "steps_total": 9,
-            "events": state.events + [{"type": "step_start", "step": name, "timestamp": now.isoformat()}],
-        }
-
-    def _complete_step(self, state: DeliberationState, name: str) -> dict:
-        now = datetime.now(timezone.utc)
-        steps = list(state.steps)
-        for s in reversed(steps):
-            if s.name == name and s.status == "in_progress":
-                s.status = "completed"
-                s.completed_at = now
-                break
         completed = len([s for s in steps if s.status == "completed"])
         return {
             "steps": [s.model_dump() for s in steps],
             "current_step": name if completed < 9 else None,
             "steps_completed": completed,
-            "events": state.events + [{"type": "step_complete", "step": name, "timestamp": now.isoformat()}],
+            "steps_total": 9,
+            "events": list(state.events) + [
+                {"type": "step_start", "step": name, "timestamp": now.isoformat()},
+                {"type": "step_complete", "step": name, "timestamp": now.isoformat()},
+            ],
         }
 
     async def _step_analyze_context(self, state: DeliberationState) -> dict:
-        step_update = self._begin_step(state, "analyze_context")
+        step_updates = self._track_step(state, "analyze_context")
         analysis = self.analyzer.analyze(state.question, state.context)
-        complete = self._complete_step(state, "analyze_context")
         return {
-            **step_update,
-            **complete,
+            **step_updates,
             "status": SessionStatus.ANALYZING_CONTEXT,
             "context_analysis": analysis.model_dump(),
         }
 
     async def _step_perspectives(self, state: DeliberationState) -> dict:
-        step_update = self._begin_step(state, "generate_perspectives")
+        step_updates = self._track_step(state, "generate_perspectives")
         responses: list[AdvisorResponse] = []
         active = self.registry.list_active()
         selections: list = []
         call_logs: list = []
 
-        if self._has_adapters:
+        if self.mode == "dry_run":
+            logger.info("Dry-run mode — zero LLM calls, pure algorithmic pipeline")
+            for profile in active:
+                self._fallback_response(profile, state, responses)
+        elif self.mode == "full_llm" and not self._has_adapters:
+            raise RuntimeError(
+                "full_llm mode requires at least one inference adapter, but none are available."
+            )
+        elif self._has_adapters:
             for profile in active:
                 selection = self._selection_engine.select(
                     persona=profile.persona,
@@ -159,6 +156,10 @@ class DeliberationGraph:
                 )
                 selections.append(selection)
                 if not selection.selected_adapter:
+                    if self.mode == "full_llm":
+                        raise RuntimeError(
+                            f"No adapter found for {profile.persona.value} in full_llm mode."
+                        )
                     logger.warning(
                         "No adapter for %s, using simulated fallback",
                         profile.persona.value,
@@ -170,6 +171,10 @@ class DeliberationGraph:
                         selection.selected_adapter
                     )
                     if adapter is None:
+                        if self.mode == "full_llm":
+                            raise RuntimeError(
+                                f"Adapter '{selection.selected_adapter}' not found in registry (full_llm mode)."
+                            )
                         self._fallback_response(profile, state, responses)
                         continue
                     perspective, log = await self._selection_engine.call_with_logging(
@@ -192,6 +197,8 @@ class DeliberationGraph:
                         wisdom_contribution=perspective.confidence,
                     )
                 except Exception as exc:
+                    if self.mode == "full_llm":
+                        raise
                     logger.warning(
                         "Inference call failed for %s, simulated fallback: %s",
                         profile.persona.value, exc,
@@ -207,10 +214,8 @@ class DeliberationGraph:
             for profile in active:
                 self._fallback_response(profile, state, responses)
 
-        complete = self._complete_step(state, "generate_perspectives")
         return {
-            **step_update,
-            **complete,
+            **step_updates,
             "status": SessionStatus.GENERATING_PERSPECTIVES,
             "advisor_responses": [r.model_dump() for r in responses],
             "model_selections": [s.model_dump() for s in selections],
@@ -245,7 +250,7 @@ class DeliberationGraph:
         responses.append(response)
 
     async def _step_arguments(self, state: DeliberationState) -> dict:
-        step_update = self._begin_step(state, "collect_arguments")
+        step_updates = self._track_step(state, "collect_arguments")
         arguments: list[Argument] = []
         for resp in state.advisor_responses:
             arg = Argument(
@@ -257,16 +262,14 @@ class DeliberationGraph:
                 supports_stance=resp.stance if hasattr(resp, 'stance') else resp.get('stance'),
             )
             arguments.append(arg)
-        complete = self._complete_step(state, "collect_arguments")
         return {
-            **step_update,
-            **complete,
+            **step_updates,
             "status": SessionStatus.COLLECTING_ARGUMENTS,
             "arguments": [a.model_dump() for a in arguments],
         }
 
     async def _step_conflicts(self, state: DeliberationState) -> dict:
-        step_update = self._begin_step(state, "resolve_conflicts")
+        step_updates = self._track_step(state, "resolve_conflicts")
         conflicts: list[Conflict] = []
         responses = state.advisor_responses
 
@@ -339,10 +342,8 @@ class DeliberationGraph:
                 root_cause="Unified assessment across all perspectives",
             ))
 
-        complete = self._complete_step(state, "resolve_conflicts")
         return {
-            **step_update,
-            **complete,
+            **step_updates,
             "status": SessionStatus.RESOLVING_CONFLICTS,
             "conflicts": [c.model_dump() for c in conflicts],
         }
@@ -362,7 +363,7 @@ class DeliberationGraph:
         return False
 
     async def _step_principles(self, state: DeliberationState) -> dict:
-        step_update = self._begin_step(state, "evaluate_principles")
+        step_updates = self._track_step(state, "evaluate_principles")
         from core.models import AdvisorResponse as AR
         responses = [AR(**r) if isinstance(r, dict) else r for r in state.advisor_responses]
         evaluations = self.principles.evaluate(
@@ -389,17 +390,15 @@ class DeliberationGraph:
             )
             updated_conflicts.append(value_conflict.model_dump())
 
-        complete = self._complete_step(state, "evaluate_principles")
         return {
-            **step_update,
-            **complete,
+            **step_updates,
             "status": SessionStatus.EVALUATING_PRINCIPLES,
             "principle_evaluations": [e.model_dump() for e in evaluations],
             "conflicts": updated_conflicts,
         }
 
     async def _step_scenarios(self, state: DeliberationState) -> dict:
-        step_update = self._begin_step(state, "explore_scenarios")
+        step_updates = self._track_step(state, "explore_scenarios")
         from core.models import AdvisorResponse as AR
         responses = [AR(**r) if isinstance(r, dict) else r for r in state.advisor_responses]
         decision = self._extract_tentative_decision(state)
@@ -408,48 +407,40 @@ class DeliberationGraph:
             advisor_responses=responses,
             decision=decision,
         )
-        complete = self._complete_step(state, "explore_scenarios")
         return {
-            **step_update,
-            **complete,
+            **step_updates,
             "status": SessionStatus.EXPLORING_SCENARIOS,
             "scenarios": [s.model_dump() for s in scenarios],
         }
 
     async def _step_reflection(self, state: DeliberationState) -> dict:
-        step_update = self._begin_step(state, "reflect")
+        step_updates = self._track_step(state, "reflect")
         result = self.reflection.reflect(state)
-        complete = self._complete_step(state, "reflect")
         return {
-            **step_update,
-            **complete,
+            **step_updates,
             "status": SessionStatus.REFLECTING,
             "reflection": result,
         }
 
     async def _step_scoring(self, state: DeliberationState) -> dict:
-        step_update = self._begin_step(state, "score_wisdom")
+        step_updates = self._track_step(state, "score_wisdom")
         from core.models import AdvisorResponse as AR
         responses = [AR(**r) if isinstance(r, dict) else r for r in state.advisor_responses]
         state.advisor_responses = responses
         wisdom = self.scorer.compute(state)
         scores = self.scorer.compute_advisor_scores(responses)
-        complete = self._complete_step(state, "score_wisdom")
         return {
-            **step_update,
-            **complete,
+            **step_updates,
             "status": SessionStatus.SCORING,
             "wisdom_score": wisdom.model_dump(),
             "scores": scores,
         }
 
     async def _step_verdict(self, state: DeliberationState) -> dict:
-        step_update = self._begin_step(state, "generate_verdict")
+        step_updates = self._track_step(state, "generate_verdict")
         verdict = self.reporter.build_verdict(state)
-        complete = self._complete_step(state, "generate_verdict")
         return {
-            **step_update,
-            **complete,
+            **step_updates,
             "status": SessionStatus.COMPLETED,
             "verdict": verdict.model_dump(),
         }

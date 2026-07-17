@@ -17,6 +17,19 @@ Organizations today face a critical problem: multiple LLMs produce multiple answ
 
 Sabdo Pandito Ratu solves this by acting as a **digital Resi (sage)** — a system that hears all advisors, detects conflicts, evaluates principles, explores consequences, reflects on its own reasoning, and delivers a reasoned verdict.
 
+## What Makes This Different from LLM Orchestration?
+
+Tools like LangChain, LlamaIndex, and AI gateways route prompts to models. Sabdo Pandito Ratu does something fundamentally different:
+
+| Capability | LLM Orchestrator | Sabdo Pandito Ratu |
+|---|---|---|
+| **Core function** | Route prompts → collect responses | Synthesize structured judgment |
+| **Works without LLM?** | No — useless without models | **Yes** — full pipeline runs on heuristics, scoring algorithms, rule-based conflict detection |
+| **What is "good"?** | Undefined — returns whatever the model says | Measured — WisdomScore (6 dimensions), ethical alignment (5 profiles) |
+| **Conflict handling** | None — returns raw outputs | Systematic — 5 conflict types detected and resolved |
+| **Transparency** | Black box — "the model said so" | Full audit trail — every step logged, reproducible |
+| **Decision ownership** | The LLM | The **process** — LLMs are just advisors, not deciders |
+
 ---
 
 ## Philosophy

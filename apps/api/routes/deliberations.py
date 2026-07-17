@@ -63,6 +63,43 @@ class DeliberateRequest(BaseModel):
     config: DeliberationConfig | None = None
 
 
+class DryRunRequest(BaseModel):
+    question: str = Field(..., min_length=10, max_length=5000)
+    context: dict = Field(default_factory=dict)
+    config: DeliberationConfig | None = None
+
+
+@router.post("/deliberate/dry-run", status_code=200)
+async def start_dry_run(body: DryRunRequest):
+    now = datetime.now(timezone.utc)
+    graph = DeliberationGraph(mode="dry_run")
+    initial_steps = [
+        {"name": name, "status": "pending", "started_at": None, "completed_at": None}
+        for name in STEP_NAMES
+    ]
+    state = DeliberationState(
+        session_id=uuid4(),
+        question=body.question,
+        context=body.context,
+        steps=initial_steps,
+        current_step=None,
+        steps_completed=0,
+        steps_total=9,
+        created_at=now,
+    )
+    result = await graph.run(state)
+    if isinstance(result, dict):
+        result = DeliberationState(**result)
+    reporter = ExplainabilityReporter()
+    return {
+        "session_id": str(result.session_id),
+        "status": result.status.value,
+        "verdict": result.verdict.model_dump() if result.verdict else None,
+        "wisdom_score": result.wisdom_score.model_dump() if result.wisdom_score else None,
+        "report": reporter.generate_report(result),
+    }
+
+
 @router.post("/deliberate", status_code=202)
 async def start_deliberation(body: DeliberateRequest):
     session_id = uuid4()
