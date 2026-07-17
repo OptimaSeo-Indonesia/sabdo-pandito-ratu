@@ -5,11 +5,13 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, version 3.
 import logging
+from datetime import datetime, timezone
 
 from langgraph.graph import END, StateGraph
 
 from core.advisors.evaluation import AdvisorEvaluator
 from core.advisors.registry import AdvisorRegistry
+from core.deliberation.analyzer import ContextAnalyzer
 from core.deliberation.reflection import ReflectionNode
 from core.evaluation.scorer import WisdomScorer
 from core.explainability.reporter import ExplainabilityReporter
@@ -23,6 +25,7 @@ from core.models import (
     ConflictType,
     ContextAnalysis,
     DeliberationState,
+    DeliberationStep,
     SessionStatus,
 )
 from core.principles.engine import PrincipleEngine
@@ -30,6 +33,18 @@ from core.principles.profiles import PrincipleProfileManager
 from core.simulation.simulator import ScenarioExplorer
 
 logger = logging.getLogger(__name__)
+
+STEP_NAMES = [
+    "analyze_context",
+    "generate_perspectives",
+    "collect_arguments",
+    "resolve_conflicts",
+    "evaluate_principles",
+    "explore_scenarios",
+    "reflect",
+    "score_wisdom",
+    "generate_verdict",
+]
 
 
 class DeliberationGraph:
@@ -45,6 +60,7 @@ class DeliberationGraph:
         reporter: ExplainabilityReporter | None = None,
         inference_registry: InferenceRegistry | None = None,
         selection_engine: BackendSelector | None = None,
+        analyzer: ContextAnalyzer | None = None,
     ):
         self.registry = registry or AdvisorRegistry()
         self.evaluator = evaluator or AdvisorEvaluator()
@@ -54,6 +70,7 @@ class DeliberationGraph:
         self.reflection = reflection or ReflectionNode()
         self.scorer = scorer or WisdomScorer()
         self.reporter = reporter or ExplainabilityReporter()
+        self.analyzer = analyzer or ContextAnalyzer()
         self._inference_registry = inference_registry or InferenceRegistry()
         self._selection_engine = selection_engine or BackendSelector(
             registry=self._inference_registry,
@@ -87,20 +104,48 @@ class DeliberationGraph:
 
         return workflow.compile()
 
-    async def _step_analyze_context(self, state: DeliberationState) -> dict:
+    def _begin_step(self, state: DeliberationState, name: str) -> dict:
+        now = datetime.now(timezone.utc)
+        step = DeliberationStep(name=name, status="in_progress", started_at=now)
+        steps = list(state.steps) + [step]
+        completed = len([s for s in steps if s.status == "completed"])
         return {
+            "steps": [s.model_dump() for s in steps],
+            "current_step": name,
+            "steps_completed": completed,
+            "steps_total": 9,
+            "events": state.events + [{"type": "step_start", "step": name, "timestamp": now.isoformat()}],
+        }
+
+    def _complete_step(self, state: DeliberationState, name: str) -> dict:
+        now = datetime.now(timezone.utc)
+        steps = list(state.steps)
+        for s in reversed(steps):
+            if s.name == name and s.status == "in_progress":
+                s.status = "completed"
+                s.completed_at = now
+                break
+        completed = len([s for s in steps if s.status == "completed"])
+        return {
+            "steps": [s.model_dump() for s in steps],
+            "current_step": name if completed < 9 else None,
+            "steps_completed": completed,
+            "events": state.events + [{"type": "step_complete", "step": name, "timestamp": now.isoformat()}],
+        }
+
+    async def _step_analyze_context(self, state: DeliberationState) -> dict:
+        step_update = self._begin_step(state, "analyze_context")
+        analysis = self.analyzer.analyze(state.question, state.context)
+        complete = self._complete_step(state, "analyze_context")
+        return {
+            **step_update,
+            **complete,
             "status": SessionStatus.ANALYZING_CONTEXT,
-            "context_analysis": ContextAnalysis(
-                domain="general",
-                stakes="unknown",
-                affected_stakeholders=["primary", "secondary"],
-                time_sensitivity="moderate",
-                key_constraints=[],
-                data_gaps=[],
-            ).model_dump(),
+            "context_analysis": analysis.model_dump(),
         }
 
     async def _step_perspectives(self, state: DeliberationState) -> dict:
+        step_update = self._begin_step(state, "generate_perspectives")
         responses: list[AdvisorResponse] = []
         active = self.registry.list_active()
         selections: list = []
@@ -162,7 +207,10 @@ class DeliberationGraph:
             for profile in active:
                 self._fallback_response(profile, state, responses)
 
+        complete = self._complete_step(state, "generate_perspectives")
         return {
+            **step_update,
+            **complete,
             "status": SessionStatus.GENERATING_PERSPECTIVES,
             "advisor_responses": [r.model_dump() for r in responses],
             "model_selections": [s.model_dump() for s in selections],
@@ -183,7 +231,7 @@ class DeliberationGraph:
         response = AdvisorResponse(
             advisor_id=f"{profile.persona.value}",
             persona=profile.persona,
-            stance="neutral",
+            stance=evaluation.stance,
             summary=evaluation.argument,
             reasoning=(
                 f"Criterion scores: "
@@ -197,6 +245,7 @@ class DeliberationGraph:
         responses.append(response)
 
     async def _step_arguments(self, state: DeliberationState) -> dict:
+        step_update = self._begin_step(state, "collect_arguments")
         arguments: list[Argument] = []
         for resp in state.advisor_responses:
             arg = Argument(
@@ -208,41 +257,112 @@ class DeliberationGraph:
                 supports_stance=resp.stance if hasattr(resp, 'stance') else resp.get('stance'),
             )
             arguments.append(arg)
+        complete = self._complete_step(state, "collect_arguments")
         return {
+            **step_update,
+            **complete,
             "status": SessionStatus.COLLECTING_ARGUMENTS,
             "arguments": [a.model_dump() for a in arguments],
         }
 
     async def _step_conflicts(self, state: DeliberationState) -> dict:
+        step_update = self._begin_step(state, "resolve_conflicts")
         conflicts: list[Conflict] = []
         responses = state.advisor_responses
 
+        def _get(obj, attr, default=None):
+            return getattr(obj, attr, None) if not isinstance(obj, dict) else obj.get(attr, default)
+
+        # Step 1: Detect stance-based explicit conflicts
         for i in range(len(responses)):
             for j in range(i + 1, len(responses)):
                 r1, r2 = responses[i], responses[j]
-                r1_p = r1.persona if hasattr(r1, 'persona') else AdvisorPersona(r1.get('persona'))
-                r2_p = r2.persona if hasattr(r2, 'persona') else AdvisorPersona(r2.get('persona'))
-                r1_s = r1.stance if hasattr(r1, 'stance') else r1.get('stance', '')
-                r2_s = r2.stance if hasattr(r2, 'stance') else r2.get('stance', '')
-                if r1_s != r2_s:
-                    conflicts.append(
-                        Conflict(
+                r1_p = _get(r1, 'persona')
+                r2_p = _get(r2, 'persona')
+                r1_s = _get(r1, 'stance', '')
+                r2_s = _get(r2, 'stance', '')
+                if r1_s and r2_s and r1_s != r2_s:
+                    is_yes1 = r1_s in ("yes", "cautious_yes")
+                    is_yes2 = r2_s in ("yes", "cautious_yes")
+                    is_no1 = r1_s in ("no", "cautious_no")
+                    is_no2 = r2_s in ("no", "cautious_no")
+
+                    if (is_yes1 and is_no2) or (is_no1 and is_yes2):
+                        conflicts.append(Conflict(
                             type=ConflictType.EXPLICIT_CONFLICT,
                             description=(
-                                f"{r1_p.value} ({r1_s}) conflicts with "
-                                f"{r2_p.value} ({r2_s})"
+                                f"{r1_p.value if hasattr(r1_p, 'value') else r1_p} ({r1_s}) "
+                                f"conflicts with "
+                                f"{r2_p.value if hasattr(r2_p, 'value') else r2_p} ({r2_s})"
                             ),
                             between_personas=[r1_p, r2_p],
-                            root_cause="Different value priorities and evaluation frameworks",
-                        )
-                    )
+                            root_cause="Opposing stances on the core question",
+                        ))
+                    elif not ((is_yes1 and is_yes2) or (is_no1 and is_no2)):
+                        conflicts.append(Conflict(
+                            type=ConflictType.NUANCE_DIFFERENCE,
+                            description=(
+                                f"{r1_p.value if hasattr(r1_p, 'value') else r1_p} ({r1_s}) vs "
+                                f"{r2_p.value if hasattr(r2_p, 'value') else r2_p} ({r2_s})"
+                            ),
+                            between_personas=[r1_p, r2_p],
+                            root_cause="Different degrees of certainty or caution",
+                        ))
 
+        # Step 2: Detect incompatible assumptions
+        for i in range(len(responses)):
+            for j in range(i + 1, len(responses)):
+                r1, r2 = responses[i], responses[j]
+                r1_assumptions = _get(r1, 'assumptions', [])
+                r2_assumptions = _get(r2, 'assumptions', [])
+                if r1_assumptions and r2_assumptions:
+                    for a1 in r1_assumptions:
+                        for a2 in r2_assumptions:
+                            if self._assumptions_conflict(a1, a2):
+                                r1_p = _get(r1, 'persona')
+                                r2_p = _get(r2, 'persona')
+                                conflicts.append(Conflict(
+                                    type=ConflictType.INCOMPATIBLE_ASSUMPTION,
+                                    description=f"Assumption conflict: \"{a1}\" vs \"{a2}\"",
+                                    between_personas=[r1_p, r2_p],
+                                    root_cause=f"Incompatible underlying assumptions",
+                                ))
+
+        # Step 3: Detect consensus (all same stance)
+        stances = [_get(r, 'stance', '') for r in responses]
+        unique_stances = set(s for s in stances if s)
+        if len(unique_stances) == 1:
+            conflicts.append(Conflict(
+                type=ConflictType.CONSENSUS,
+                description=f"All advisors agree: {list(unique_stances)[0]}",
+                between_personas=[_get(r, 'persona') for r in responses],
+                root_cause="Unified assessment across all perspectives",
+            ))
+
+        complete = self._complete_step(state, "resolve_conflicts")
         return {
+            **step_update,
+            **complete,
             "status": SessionStatus.RESOLVING_CONFLICTS,
             "conflicts": [c.model_dump() for c in conflicts],
         }
 
+    def _assumptions_conflict(self, a1: str, a2: str) -> bool:
+        a1_lower = a1.lower()
+        a2_lower = a2.lower()
+        negation_pairs = [
+            ("not", "is"), ("cannot", "can"), ("will not", "will"),
+            ("should not", "should"), ("no need", "need"),
+            ("low risk", "high risk"), ("expensive", "cheap"),
+            ("fast", "slow"), ("short", "long"),
+        ]
+        for neg, pos in negation_pairs:
+            if (neg in a1_lower and pos in a2_lower) or (pos in a1_lower and neg in a2_lower):
+                return True
+        return False
+
     async def _step_principles(self, state: DeliberationState) -> dict:
+        step_update = self._begin_step(state, "evaluate_principles")
         from core.models import AdvisorResponse as AR
         responses = [AR(**r) if isinstance(r, dict) else r for r in state.advisor_responses]
         evaluations = self.principles.evaluate(
@@ -253,12 +373,33 @@ class DeliberationGraph:
         )
         profile_name = state.context.get("principle_profile", "balanced") if isinstance(state.context, dict) else "balanced"
         evaluations = self.profiles.apply_weights(profile_name, evaluations)
+
+        # Detect value tradeoffs from principle evaluations
+        updated_conflicts = [c.model_dump() if hasattr(c, 'model_dump') else c for c in state.conflicts]
+        high_scores = [e for e in evaluations if e.score >= 7]
+        low_scores = [e for e in evaluations if e.score < 5]
+        if high_scores and low_scores:
+            high_principles = ", ".join(e.principle for e in high_scores)
+            low_principles = ", ".join(e.principle for e in low_scores)
+            value_conflict = Conflict(
+                type=ConflictType.VALUE_TRADEOFF,
+                description=f"Tradeoff between {high_principles} (high) and {low_principles} (low)",
+                between_personas=[AdvisorPersona.RATIONAL_ANALYST, AdvisorPersona.HUMANITARIAN],
+                root_cause="Inherent value tension between competing ethical principles",
+            )
+            updated_conflicts.append(value_conflict.model_dump())
+
+        complete = self._complete_step(state, "evaluate_principles")
         return {
+            **step_update,
+            **complete,
             "status": SessionStatus.EVALUATING_PRINCIPLES,
             "principle_evaluations": [e.model_dump() for e in evaluations],
+            "conflicts": updated_conflicts,
         }
 
     async def _step_scenarios(self, state: DeliberationState) -> dict:
+        step_update = self._begin_step(state, "explore_scenarios")
         from core.models import AdvisorResponse as AR
         responses = [AR(**r) if isinstance(r, dict) else r for r in state.advisor_responses]
         decision = self._extract_tentative_decision(state)
@@ -267,33 +408,48 @@ class DeliberationGraph:
             advisor_responses=responses,
             decision=decision,
         )
+        complete = self._complete_step(state, "explore_scenarios")
         return {
+            **step_update,
+            **complete,
             "status": SessionStatus.EXPLORING_SCENARIOS,
             "scenarios": [s.model_dump() for s in scenarios],
         }
 
     async def _step_reflection(self, state: DeliberationState) -> dict:
+        step_update = self._begin_step(state, "reflect")
         result = self.reflection.reflect(state)
+        complete = self._complete_step(state, "reflect")
         return {
+            **step_update,
+            **complete,
             "status": SessionStatus.REFLECTING,
             "reflection": result,
         }
 
     async def _step_scoring(self, state: DeliberationState) -> dict:
+        step_update = self._begin_step(state, "score_wisdom")
         from core.models import AdvisorResponse as AR
         responses = [AR(**r) if isinstance(r, dict) else r for r in state.advisor_responses]
         state.advisor_responses = responses
         wisdom = self.scorer.compute(state)
         scores = self.scorer.compute_advisor_scores(responses)
+        complete = self._complete_step(state, "score_wisdom")
         return {
+            **step_update,
+            **complete,
             "status": SessionStatus.SCORING,
             "wisdom_score": wisdom.model_dump(),
             "scores": scores,
         }
 
     async def _step_verdict(self, state: DeliberationState) -> dict:
+        step_update = self._begin_step(state, "generate_verdict")
         verdict = self.reporter.build_verdict(state)
+        complete = self._complete_step(state, "generate_verdict")
         return {
+            **step_update,
+            **complete,
             "status": SessionStatus.COMPLETED,
             "verdict": verdict.model_dump(),
         }

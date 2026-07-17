@@ -268,6 +268,13 @@ class ContextAnalysis(BaseModel):
     data_gaps: list[str] = Field(default_factory=list)
 
 
+class DeliberationStep(BaseModel):
+    name: str
+    status: str = "pending"
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+
+
 # ─── Verdict ────────────────────────────────────────────────────
 
 class Verdict(BaseModel):
@@ -298,6 +305,11 @@ class DeliberationState(BaseModel):
     question: str
     context: dict = Field(default_factory=dict)
     status: SessionStatus = SessionStatus.PENDING
+    steps: list[DeliberationStep] = Field(default_factory=list)
+    current_step: str | None = None
+    steps_completed: int = 0
+    steps_total: int = 9
+    events: list[dict] = Field(default_factory=list)
     context_analysis: ContextAnalysis | None = None
     advisor_responses: list[AdvisorResponse] = Field(default_factory=list)
     arguments: list[Argument] = Field(default_factory=list)

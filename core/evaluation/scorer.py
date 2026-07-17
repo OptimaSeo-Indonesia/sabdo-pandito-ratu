@@ -73,7 +73,12 @@ class WisdomScorer:
 
     def _score_uncertainty(self, state: DeliberationState) -> float:
         # Higher score = better handling of uncertainty
-        gaps = len(state.context_analysis.data_gaps) if state.context_analysis else 0
+        ca = state.context_analysis
+        if isinstance(ca, dict):
+            data_gaps = ca.get("data_gaps", [])
+        else:
+            data_gaps = ca.data_gaps if ca else []
+        gaps = len(data_gaps)
         uncertainty_mentioned = sum(
             1 for r in state.advisor_responses if "uncertain" in r.reasoning.lower()
         )

@@ -21,9 +21,8 @@ async def list_advisors():
                 "persona": p.persona.value,
                 "name": p.name,
                 "description": p.description,
-                "provider": p.provider,
-                "model": p.model,
                 "active": p.active,
+                "capability_requirements": p.capability_requirements.model_dump(),
             }
             for p in active
         ]
@@ -47,8 +46,7 @@ async def get_advisor(persona: str):
         "name": profile.name,
         "description": profile.description,
         "system_prompt": profile.system_prompt,
-        "provider": profile.provider,
-        "model": profile.model,
         "priority_weights": profile.priority_weights,
+        "capability_requirements": profile.capability_requirements.model_dump(),
         "active": profile.active,
     }

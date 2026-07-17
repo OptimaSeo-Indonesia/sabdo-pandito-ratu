@@ -86,7 +86,6 @@ class InferenceAdapter(ABC):
     ) -> Perspective:
         ...
 
-    @abstractmethod
     async def generate_counter_argument(
         self,
         advisor_id: str,
@@ -94,9 +93,8 @@ class InferenceAdapter(ABC):
         perspectives: list[Perspective],
         model: str | None = None,
     ) -> Argument:
-        ...
+        raise NotImplementedError(f"{self.adapter_id} does not implement generate_counter_argument")
 
-    @abstractmethod
     async def judge(
         self,
         system_prompt: str,
@@ -104,4 +102,4 @@ class InferenceAdapter(ABC):
         question: str,
         model: str | None = None,
     ) -> dict:
-        ...
+        raise NotImplementedError(f"{self.adapter_id} does not implement judge")

@@ -19,7 +19,7 @@ All endpoints return JSON. Authentication is via `X-API-Key` header (future: OAu
 
 ### 2.1 Start a Deliberation
 
-Initiates a multi-advisor deliberation process.
+Initiates a multi-advisor deliberation process. The pipeline runs asynchronously — the endpoint returns immediately with a `session_id` for polling.
 
 ```
 POST /api/v1/deliberate
@@ -42,23 +42,24 @@ POST /api/v1/deliberate
     }
   },
   "config": {
-    "advisors": ["gpt-4", "claude-3-opus", "llama-3-70b"],
+    "advisors": ["rational_analyst", "economic", "devils_advocate"],
     "debate_rounds": 2,
-    "judge": "claude-3-opus",
     "return_full_report": true,
     "timeout_seconds": 60
   }
 }
 ```
 
+The `config.advisors` field accepts persona IDs (`rational_analyst`, `humanitarian`, `economic`, `legal`, `devils_advocate`, `long_term_strategist`). If omitted, all 6 active personas are used.
+
 **Response (202 Accepted):**
 
 ```json
 {
-  "session_id": "sess_a1b2c3d4",
+  "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "status": "pending",
-  "status_url": "/api/v1/deliberate/sess_a1b2c3d4",
-  "estimated_completion_seconds": 25
+  "status_url": "/api/v1/deliberate/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "estimated_completion_seconds": 30
 }
 ```
 
@@ -68,41 +69,77 @@ POST /api/v1/deliberate
 GET /api/v1/deliberate/{session_id}
 ```
 
-**Response:**
+**Response (in progress):**
 
 ```json
 {
-  "session_id": "sess_a1b2c3d4",
+  "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "question": "Should our startup pivot from B2C to B2B?",
-  "status": "completed",
+  "status": "generating_perspectives",
   "progress": {
-    "current_step": "generate_verdict",
-    "steps_completed": 5,
-    "steps_total": 6
+    "current_step": "generate_perspectives",
+    "steps_completed": 1,
+    "steps_total": 9,
+    "steps": [
+      {"name": "analyze_context", "status": "completed"},
+      {"name": "generate_perspectives", "status": "in_progress"},
+      {"name": "collect_arguments", "status": "pending"},
+      {"name": "resolve_conflicts", "status": "pending"},
+      {"name": "evaluate_principles", "status": "pending"},
+      {"name": "explore_scenarios", "status": "pending"},
+      {"name": "reflect", "status": "pending"},
+      {"name": "score_wisdom", "status": "pending"},
+      {"name": "generate_verdict", "status": "pending"}
+    ]
   },
   "advisor_statuses": [
     {
-      "advisor_id": "gpt-4",
-      "status": "completed",
-      "confidence": 0.82,
-      "latency_ms": 3400
-    },
-    {
-      "advisor_id": "claude-3-opus",
-      "status": "completed",
-      "confidence": 0.91,
-      "latency_ms": 4200
-    },
-    {
-      "advisor_id": "llama-3-70b",
-      "status": "completed",
-      "confidence": 0.75,
-      "latency_ms": 5800
+      "persona": "rational_analyst",
+      "stance": "cautious_yes",
+      "confidence": 0.72
     }
+  ]
+}
+```
+
+**Response (completed):**
+
+```json
+{
+  "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "question": "Should our startup pivot from B2C to B2B?",
+  "status": "completed",
+  "progress": {
+    "current_step": null,
+    "steps_completed": 9,
+    "steps_total": 9,
+    "steps": [
+      {"name": "analyze_context", "status": "completed"},
+      {"name": "generate_perspectives", "status": "completed"},
+      {"name": "collect_arguments", "status": "completed"},
+      {"name": "resolve_conflicts", "status": "completed"},
+      {"name": "evaluate_principles", "status": "completed"},
+      {"name": "explore_scenarios", "status": "completed"},
+      {"name": "reflect", "status": "completed"},
+      {"name": "score_wisdom", "status": "completed"},
+      {"name": "generate_verdict", "status": "completed"}
+    ]
+  },
+  "advisor_statuses": [
+    {"persona": "rational_analyst", "stance": "cautious_yes", "confidence": 0.82},
+    {"persona": "humanitarian", "stance": "cautious_no", "confidence": 0.65},
+    {"persona": "economic", "stance": "yes", "confidence": 0.91},
+    {"persona": "legal", "stance": "cautious_yes", "confidence": 0.55},
+    {"persona": "devils_advocate", "stance": "no", "confidence": 0.78},
+    {"persona": "long_term_strategist", "stance": "cautious_yes", "confidence": 0.70}
   ],
-  "verdict": { ... },
-  "created_at": "2026-07-17T10:00:00Z",
-  "completed_at": "2026-07-17T10:00:25Z"
+  "verdict": {
+    "decision": "Proceed with caution — monitor key risk factors",
+    "confidence": 0.78,
+    "summary": "After consulting 6 advisor personas, identifying 4 key conflicts, and evaluating 5 ethical principles (3/5 score >= 7/10), the council recommends: Proceed with caution — monitor key risk factors",
+    "wisdom_score": 72.4
+  },
+  "report_url": "/api/v1/deliberate/a1b2c3d4-e5f6-7890-abcd-ef1234567890/report"
 }
 ```
 
@@ -112,67 +149,116 @@ GET /api/v1/deliberate/{session_id}
 GET /api/v1/deliberate/{session_id}/report
 ```
 
-Returns the complete detailed report including all perspectives, arguments, disagreements, evaluations, scores, and the final verdict.
+Returns the complete detailed report including all perspectives, arguments, conflicts, evaluations, scenarios, reflection, and the final verdict.
 
 **Response:**
 
 ```json
 {
-  "session_id": "sess_a1b2c3d4",
+  "case": {
+    "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "question": "Should our startup pivot from B2C to B2B?",
+    "domain": "business"
+  },
   "verdict": {
-    "decision": "Proceed with a phased pivot — maintain B2C while building B2B MVP for 3 educational institutions",
+    "decision": "Proceed with caution — monitor key risk factors",
     "confidence": 0.78,
-    "summary": "A majority of advisors recommend a phased approach...",
-    "reasoning": {
-      "key_factors": [
-        "Current B2C MRR provides runway for 6 months",
-        "B2B market in SEA edtech growing at 34% YoY",
-        "Churn rate of 12% signals product-market fit issues in B2C"
-      ],
-      "supporting_arguments": [
-        {
-          "advisor_id": "claude-3-opus",
-          "argument": "B2B contracts provide predictable revenue and higher LTV",
-          "score": 0.91
-        },
-        {
-          "advisor_id": "gpt-4",
-          "argument": "Dual-track approach reduces downside risk",
-          "score": 0.82
-        }
-      ],
-      "opposing_arguments": [
-        {
-          "advisor_id": "llama-3-70b",
-          "argument": "Pivot may dilute focus and burn out the team",
-          "score": 0.75
-        }
-      ],
-      "disagreements": [
-        {
-          "type": "explicit_conflict",
-          "between": ["claude-3-opus", "llama-3-70b"],
-          "issue": "Speed of pivot",
-          "resolution": "Compromise: phased approach over 6 months"
-        }
-      ]
+    "wisdom_score": {
+      "evidence_quality": 72.0,
+      "perspective_diversity": 85.0,
+      "ethical_alignment": 68.0,
+      "long_term_impact": 70.0,
+      "uncertainty_handling": 65.0,
+      "reversibility": 80.0
     },
-    "uncertainty_factors": [
-      "Market data is 3 months old",
-      "Competitor analysis not included in context"
+    "overall_score": 72.4
+  },
+  "council_composition": [
+    {
+      "persona": "rational_analyst",
+      "stance": "cautious_yes",
+      "confidence": 0.82,
+      "summary": "From a rational_analyst perspective, the assessment is **cautious_yes**..."
+    }
+  ],
+  "conflicts": [
+    {
+      "type": "explicit_conflict",
+      "between": ["economic", "devils_advocate"],
+      "description": "economic (yes) conflicts with devils_advocate (no)",
+      "root_cause": "Opposing stances on the core question"
+    },
+    {
+      "type": "consensus",
+      "between": ["rational_analyst", "humanitarian", "legal", "long_term_strategist"],
+      "description": "All advisors agree: cautious_yes",
+      "root_cause": "Unified assessment across all perspectives"
+    }
+  ],
+  "principle_evaluations": [
+    {
+      "principle": "fairness",
+      "score": 7.5,
+      "weight": 0.20,
+      "rationale": "Evaluated against stakeholder impact",
+      "concerns": ["Potential unequal access to transition support"]
+    }
+  ],
+  "scenario_explorations": [
+    {
+      "name": "aggressive_pivot_optimistic_6_months",
+      "horizon": "6 months",
+      "probability": 0.55,
+      "assumptions": [{"description": "Market demand materializes", "confidence": 0.6}],
+      "uncertainty_level": "medium",
+      "net_impact": 3.0
+    }
+  ],
+  "reflection": {
+    "reflection_notes": [
+      "Healthy disagreement detected: economic vs devils_advocate...",
+      "Data gaps identified: 3. Decision confidence should reflect this uncertainty."
     ],
-    "recommendations": [
-      "Validate B2B demand with 5 customer interviews before committing resources",
-      "Set a 3-month checkpoint to evaluate B2B traction",
-      "Maintain B2C operations at current level during transition"
-    ]
+    "missing_perspectives": [],
+    "consistency_issues": [],
+    "confidence_adjustment": -0.15
   },
-  "scores": {
-    "claude-3-opus": 0.91,
-    "gpt-4": 0.82,
-    "llama-3-70b": 0.75
+  "reasoning": {
+    "key_factors": [
+      "Market analysis shows 34% YoY growth in B2B segment",
+      "Current churn rate of 12% indicates B2C product-market fit issues"
+    ],
+    "supporting": [
+      {"persona": "economic", "argument": "Analysis from economic perspective", "confidence": 0.91, "score": 91.0}
+    ],
+    "opposing": [
+      {"persona": "devils_advocate", "argument": "Analysis from devils_advocate perspective", "confidence": 0.78, "score": 78.0}
+    ],
+    "conflict_resolution": "Conflict between economic and devils_advocate: Different value priorities and evaluation frameworks. Resolved by seeking balanced approach."
   },
-  "created_at": "2026-07-17T10:00:00Z"
+  "uncertainties": [
+    "Cost and budget details are missing",
+    "Revenue projections are not validated"
+  ],
+  "alternatives": [
+    "Phased approach — implement gradually with checkpoints",
+    "Parallel track — run pilot before full commitment",
+    "Status quo — maintain current course with adjustments"
+  ],
+  "recommendations": [
+    "Validate key assumptions with empirical data before committing",
+    "Address fairness concerns: review alignment"
+  ],
+  "model_selections": [
+    {
+      "persona": "rational_analyst",
+      "selected_adapter": "ollama",
+      "selected_model": "llama3.1",
+      "selection_reason": "Declared=6.5/10 (no verified data yet) — best across 2 adapter/model(s)",
+      "fallback_occurred": false,
+      "fallback_from": null
+    }
+  ]
 }
 ```
 
@@ -186,23 +272,34 @@ GET /api/v1/sessions?status=completed&limit=20&offset=0
 
 ```json
 {
-  "items": [
-    {
-      "session_id": "sess_a1b2c3d4",
-      "question": "Should our startup pivot...",
-      "status": "completed",
-      "advisor_count": 3,
-      "confidence": 0.78,
-      "created_at": "2026-07-17T10:00:00Z"
-    }
-  ],
-  "total": 42,
+  "items": [],
+  "total": 0,
   "limit": 20,
   "offset": 0
 }
 ```
 
-### 2.5 List Advisors
+*Note: Session listing requires a database backend. Currently returns empty until PostgreSQL is connected.*
+
+### 2.5 Session Stats
+
+```
+GET /api/v1/sessions/stats
+```
+
+**Response:**
+
+```json
+{
+  "total_cases": 5,
+  "cases_with_outcomes": 2,
+  "avg_confidence": 0.78,
+  "avg_outcome_score": 3.5,
+  "domains": ["business", "technology"]
+}
+```
+
+### 2.6 List Advisors
 
 ```
 GET /api/v1/advisors
@@ -214,24 +311,45 @@ GET /api/v1/advisors
 {
   "advisors": [
     {
-      "id": "advisor_gpt4",
-      "name": "GPT-4 Strategist",
-      "provider": "openai",
-      "model": "gpt-4-turbo",
-      "capabilities": ["reasoning", "business_analysis", "coding"],
-      "specialization": "business_strategy",
-      "active": true
-    },
-    {
-      "id": "advisor_claude3",
-      "name": "Claude 3 Analyst",
-      "provider": "anthropic",
-      "model": "claude-3-opus-20240229",
-      "capabilities": ["reasoning", "research", "ethics"],
-      "specialization": "risk_analysis",
-      "active": true
+      "persona": "rational_analyst",
+      "name": "Rational Analyst",
+      "description": "Focuses on data, probabilities, and empirical evidence",
+      "active": true,
+      "capability_requirements": {
+        "reasoning": 9,
+        "structured_output": true,
+        "nuanced_language": false,
+        "ethical_reasoning": 0,
+        "numerical_reasoning": 8,
+        "long_context": false,
+        "high_reliability": true
+      }
     }
   ]
+}
+```
+
+### 2.7 Get Advisor Detail
+
+```
+GET /api/v1/advisors/{persona}
+```
+
+**Response:**
+
+```json
+{
+  "persona": "rational_analyst",
+  "name": "Rational Analyst",
+  "description": "Focuses on data, probabilities, and empirical evidence",
+  "system_prompt": "You are a Rational Analyst...",
+  "priority_weights": {"evidence": 0.4, "logic": 0.4, "data": 0.2},
+  "capability_requirements": {
+    "reasoning": 9,
+    "structured_output": true,
+    "numerical_reasoning": 8
+  },
+  "active": true
 }
 ```
 
@@ -245,56 +363,44 @@ GET /api/v1/advisors
 WS /api/v1/ws/deliberate/{session_id}
 ```
 
-Provides real-time streaming of deliberation progress.
+Provides real-time updates on deliberation progress. The server sends JSON messages as the pipeline progresses.
 
 **Messages (Server → Client):**
 
 ```json
-// Step update
+// Status update (sent every 0.5s during deliberation)
 {
-  "type": "step_update",
-  "session_id": "sess_a1b2c3d4",
+  "type": "status_update",
+  "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "generating_perspectives",
   "current_step": "generate_perspectives",
-  "progress": 0.16
-}
-
-// Advisor response received
-{
-  "type": "advisor_response",
-  "session_id": "sess_a1b2c3d4",
-  "advisor_id": "claude-3-opus",
-  "perspective": {
-    "stance": "cautious_pivot",
-    "summary": "A phased pivot is recommended...",
-    "confidence": 0.91
-  }
-}
-
-// Disagreement detected
-{
-  "type": "disagreement",
-  "session_id": "sess_a1b2c3d4",
-  "between": ["claude-3-opus", "llama-3-70b"],
-  "issue": "Timeline for pivot"
+  "steps_completed": 1,
+  "steps_total": 9
 }
 
 // Verdict ready
 {
   "type": "verdict",
-  "session_id": "sess_a1b2c3d4",
-  "verdict": { ... },
-  "report_url": "/api/v1/deliberate/sess_a1b2c3d4/report"
+  "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "completed",
+  "verdict": {
+    "decision": "Proceed with caution — monitor key risk factors",
+    "confidence": 0.78,
+    "wisdom_score": 72.4
+  }
 }
 
 // Error
 {
   "type": "error",
-  "session_id": "sess_a1b2c3d4",
-  "code": "ADVISOR_TIMEOUT",
-  "message": "llama-3-70b did not respond within 30s",
-  "advisor_id": "llama-3-70b"
+  "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "detail": "No inference adapters available"
 }
 ```
+
+**Client → Server messages:**
+
+The client can request a status refresh by sending any text message (e.g., `"ping"`).
 
 ---
 
@@ -323,39 +429,16 @@ All errors follow a consistent schema:
 | HTTP Status | Code                  | Description                        |
 |-------------|-----------------------|------------------------------------|
 | 400         | VALIDATION_ERROR      | Invalid request body or parameters |
-| 401         | UNAUTHORIZED          | Missing or invalid API key         |
 | 404         | NOT_FOUND             | Session or advisor not found       |
-| 408         | ADVISOR_TIMEOUT       | An advisor did not respond in time |
-| 429         | RATE_LIMITED          | Too many requests                  |
 | 500         | INTERNAL_ERROR        | Unexpected server error            |
-| 502         | PROVIDER_ERROR        | AI provider returned an error      |
-| 503         | SERVICE_UNAVAILABLE   | System is overloaded or in maintenance |
 
 ---
 
-## 5. Rate Limiting
-
-```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1700123456
-```
-
-| Tier     | Rate Limit         | Burst   |
-|----------|---------------------|---------|
-| Free     | 10 req/min         | 20      |
-| Pro      | 100 req/min        | 200     |
-| Enterprise | Custom           | Custom  |
-
----
-
-## 6. Pydantic Schemas (API Layer)
+## 5. Pydantic Schemas (API Layer)
 
 ```python
 from pydantic import BaseModel, Field
-from typing import Optional
 from uuid import UUID
-from datetime import datetime
 
 
 class DeliberateRequest(BaseModel):
@@ -365,33 +448,17 @@ class DeliberateRequest(BaseModel):
 
 
 class DeliberationConfig(BaseModel):
-    advisors: list[str] | None = None  # None = use all active
+    advisors: list[str] | None = None  # persona IDs, None = use all active
     debate_rounds: int = Field(default=2, ge=0, le=5)
     judge: str | None = None
     return_full_report: bool = True
     timeout_seconds: int = Field(default=60, ge=10, le=300)
 
 
-class VerdictResponse(BaseModel):
-    session_id: UUID
-    decision: str
-    confidence: float = Field(..., ge=0, le=1)
-    summary: str
-    reasoning: ReasoningDetail
-    uncertainty_factors: list[str]
-    recommendations: list[str]
-    scores: dict[str, float]
-
-
-class ReasoningDetail(BaseModel):
-    key_factors: list[str]
-    supporting_arguments: list[ScoredArgument]
-    opposing_arguments: list[ScoredArgument]
-    disagreements: list[DisagreementSummary]
-
-
-class ScoredArgument(BaseModel):
-    advisor_id: str
-    argument: str
-    score: float = Field(..., ge=0, le=1)
+class AdvisorListItem(BaseModel):
+    persona: str
+    name: str
+    description: str
+    active: bool
+    capability_requirements: dict
 ```

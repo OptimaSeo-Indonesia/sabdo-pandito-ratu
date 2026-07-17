@@ -132,13 +132,18 @@ class ReflectionNode:
     def _check_uncertainty_disclosure(
         self, state: DeliberationState, result: ReflectionResult
     ) -> None:
-        if state.context_analysis and state.context_analysis.data_gaps:
+        ca = state.context_analysis
+        if isinstance(ca, dict):
+            data_gaps = ca.get("data_gaps", [])
+        else:
+            data_gaps = ca.data_gaps if ca else []
+        if data_gaps:
             result.reflection_notes.append(
-                f"Data gaps identified: {len(state.context_analysis.data_gaps)}. "
+                f"Data gaps identified: {len(data_gaps)}. "
                 f"Decision confidence should reflect this uncertainty."
             )
             result.confidence_adjustment -= 0.05 * min(
-                len(state.context_analysis.data_gaps), 3
+                len(data_gaps), 3
             )
 
     def _compute_confidence_adjustment(

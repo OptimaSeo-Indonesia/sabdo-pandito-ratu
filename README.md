@@ -70,18 +70,18 @@ User Problem / Question
 │     Context Analyzer ── identifies domain, stakeholders, gaps     │
 │           │                                                      │
 │     Advisor Council ── 6 personas with criteria-based evaluation  │
-│       ├── Rational Analyst     (GPT-4)     → evidence & data     │
-│       ├── Humanitarian         (Claude 3)  → human impact        │
-│       ├── Economic             (GPT-4)     → cost & efficiency   │
-│       ├── Legal                (Claude 3)  → compliance & risk   │
-│       ├── Devil's Advocate     (Llama 3)   → edge cases          │
-│       └── Long-Term Strategist (Claude 3)  → systemic effects    │
+│       ├── Rational Analyst     → evidence, data, probabilities   │
+│       ├── Humanitarian         → human impact, fairness, dignity │
+│       ├── Economic             → cost, efficiency, sustainability│
+│       ├── Legal                → compliance, liability, risk     │
+│       ├── Devil's Advocate     → edge cases, failure modes       │
+│       └── Long-Term Strategist → systemic effects, 10yr horizon  │
 │                                                                   │
 │  2. DELIBERATION LAYER                                            │
 │                                                                   │
 │     Argument Collector ── structure raw responses                 │
 │           │                                                      │
-│     Conflict Resolver ── detect stance disagreements             │
+│     Conflict Resolver ── detects 5 conflict types                │
 │           │                                                      │
 │  3. DHARMA LAYER (Principle Engine)                               │
 │                                                                   │
@@ -124,6 +124,7 @@ Decision Report (explainable, auditable)
 | Module | Responsibility |
 |--------|----------------|
 | **Advisor Council** | 6 persona profiles with criteria-based evaluation frameworks |
+| **Inference Layer** | Vendor-agnostic adapter interface — selects best adapter per persona via capability matching |
 | **Deliberation Engine** | 9-step LangGraph state machine orchestrating the full pipeline |
 | **Dharma Layer** | Principle evaluation engine with configurable weight profiles |
 | **Consequence Layer** | Multi-horizon scenario exploration with assumptions tracking |
@@ -140,7 +141,7 @@ Decision Report (explainable, auditable)
 | P0 | ✓ Completed | Foundation: architecture, provider abstraction, advisor system |
 | P1 | ✓ Completed | Deliberation core: LangGraph pipeline, conflict resolver, reflection node |
 | P2 | ✓ Completed | Wisdom framework: principle engine, scenario exploration, wisdom scorer |
-| P3 | ✓ Completed | Memory intelligence: collective wisdom case storage |
+| P3 | ✓ Completed | Memory intelligence: collective wisdom case storage, database schema |
 | P4 | 🔜 Next | Evaluation & benchmarking: decision datasets, comparison vs single LLM |
 | P5 | 📅 Planned | Production platform: auth, multi-user, API access, dashboard |
 | P6 | 📅 Planned | Community intelligence: shared cases, open decision repository |
@@ -156,8 +157,10 @@ See [docs/mvp-roadmap.md](docs/mvp-roadmap.md) for the detailed development plan
 git clone https://github.com/your-org/sabdo-pandito-ratu.git
 cd sabdo-pandito-ratu
 
-# Start all services
-docker compose up -d
+# Create virtual environment and install
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 
 # Run tests to verify the deliberation pipeline
 python -m pytest tests/ -v
@@ -171,19 +174,20 @@ python -m pytest tests/ -v
 sabdo-pandito-ratu/
 ├── apps/
 │   ├── api/              # FastAPI backend
-│   └── web/              # Next.js frontend
+│   │   ├── routes/       # REST + WebSocket endpoints
+│   │   └── db/           # Alembic migrations + SQLAlchemy models
+│   └── web/              # Next.js frontend (scaffold)
 ├── core/
-│   ├── deliberation/     # 9-step LangGraph pipeline + Reflection
+│   ├── deliberation/     # 9-step LangGraph pipeline + Reflection + Analyzer
 │   ├── advisors/         # Persona definitions, registry, evaluation
+│   ├── inference/        # Backend selection + capability scoring
 │   ├── principles/       # Dharma Layer — principle engine + profiles
 │   ├── simulation/       # Consequence Layer — scenario exploration
-│   ├── evaluation/       # Judgment Layer — 6-dimension wisom scoring
+│   ├── evaluation/       # Judgment Layer — 6-dimension wisdom scoring
 │   ├── explainability/   # Decision report generation
 │   └── memory/           # Collective Wisdom Memory
-├── providers/
-│   ├── openai/           # OpenAI-compatible adapter
-│   ├── anthropic/        # Anthropic adapter
-│   └── ollama/           # Ollama local model adapter
+├── inference/
+│   └── adapters/         # Inference adapter implementations
 ├── docs/                 # Documentation
 │   ├── PRD.md
 │   ├── architecture.md
@@ -192,7 +196,7 @@ sabdo-pandito-ratu/
 │   ├── mvp-roadmap.md
 │   └── decision-model.md
 ├── examples/             # Decision reports
-├── tests/                # 64+ tests across all modules
+├── tests/                # 81 tests across all modules
 ├── docker-compose.yml
 └── README.md
 ```
@@ -207,16 +211,8 @@ sabdo-pandito-ratu/
 | [Architecture](docs/architecture.md) | System architecture, layers, data flow |
 | [Decision Model](docs/decision-model.md) | WisdomScore, Reflection, Principle Profiles — how verdicts are made |
 | [API Design](docs/api-design.md) | REST + WebSocket API specification |
-| [Database](docs/database-design.md) | PostgreSQL + pgvector schema |
+| [Database](docs/database-design.md) | PostgreSQL + pgvector schema (Alembic migrations ready) |
 | [Roadmap](docs/mvp-roadmap.md) | Development roadmap with phases and milestones |
-
----
-
-## Contributing
-
-Sabdo Pandito Ratu is community-driven. All contributions — code, docs, ideas, feedback — are welcome.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 

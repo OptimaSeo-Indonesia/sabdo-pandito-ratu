@@ -30,7 +30,7 @@ Sabdo Pandito Ratu is organized into **6 layers** that transform a user question
 │                          │  │         │ │Advocate│ │Term    │  │   │
 │                          │  └────────┘ └────────┘ └────────┘  │   │
 │                          └──────────────────────────────────────┘   │
-│  Key files: core/advisors/evaluation.py, core/advisors/personas.py  │
+│  Key files: core/deliberation/analyzer.py, core/advisors/*          │
 └──────────────────────────────┬───────────────────────────────────────┘
                                │
 ┌──────────────────────────────▼───────────────────────────────────────┐
@@ -39,6 +39,7 @@ Sabdo Pandito Ratu is organized into **6 layers** that transform a user question
 │  ┌──────────────────┐    ┌──────────────────┐    ┌───────────────┐  │
 │  │ Argument Collector│───▶│  Conflict        │───▶│  Reflection   │  │
 │  │ (structured args) │    │  Resolver        │    │  (meta-check) │  │
+│  │                   │    │  (5 types)       │    │               │  │
 │  └──────────────────┘    └──────────────────┘    └───────────────┘  │
 │                                                                      │
 │  Key files: core/deliberation/graph.py, core/deliberation/reflection.py│
@@ -105,6 +106,8 @@ Sabdo Pandito Ratu is organized into **6 layers** that transform a user question
 │  │  Case: { problem, context, arguments,                        │   │
 │  │          decision, outcome, lessons }                         │   │
 │  │                                                              │   │
+│  │  Storage: in-memory (dict) + optional PostgreSQL backend      │   │
+│  │                                                              │   │
 │  │  Features: save, find_similar, record_outcome, get_stats     │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │  Key files: core/memory/store.py                                    │
@@ -121,12 +124,12 @@ The core of the system is a **LangGraph state machine** defined in `core/deliber
 
 | Step | Node | Layer | Input | Output | Description |
 |------|------|-------|-------|--------|-------------|
-| 1 | `analyze_context` | Advisor Intelligence | question, context | `ContextAnalysis` | Identifies domain, stakes, stakeholders, time sensitivity, data gaps |
-| 2 | `generate_perspectives` | Advisor Intelligence | context analysis | `list[AdvisorResponse]` | Invokes each active advisor persona with its criteria matrix |
+| 1 | `analyze_context` | Advisor Intelligence | question, context | `ContextAnalysis` | Identifies domain via keyword matching, extracts stakeholders, detects urgency, identifies data gaps |
+| 2 | `generate_perspectives` | Advisor Intelligence | context analysis | `list[AdvisorResponse]` | Invokes each active advisor persona — uses real inference adapters or simulated evaluation fallback |
 | 3 | `collect_arguments` | Deliberation | perspectives | `list[Argument]` | Structures raw responses into claim + evidence + reasoning |
-| 4 | `resolve_conflicts` | Deliberation | arguments | `list[Conflict]` | Pairwise comparison of stances, classifies conflict types |
-| 5 | `evaluate_principles` | Dharma | conflicts, perspectives | `list[PrincipleEvaluation]` | Scores 5 principles, applies profile-based weights |
-| 6 | `explore_scenarios` | Consequence | principles, tentative decision | `list[ScenarioExploration]` | Generates 12 scenarios with assumptions and uncertainty |
+| 4 | `resolve_conflicts` | Deliberation | arguments | `list[Conflict]` | Pairwise comparison: detects explicit_conflict, nuance_difference, incompatible_assumption, consensus, value_tradeoff |
+| 5 | `evaluate_principles` | Dharma | conflicts, perspectives | `list[PrincipleEvaluation]` | Scores 5 principles, applies profile-based weights, detects value tradeoffs |
+| 6 | `explore_scenarios` | Consequence | principles, tentative decision | `list[ScenarioExploration]` | Generates 12 scenarios (4 horizons × 3 biases) with assumptions and uncertainty |
 | 7 | `reflect` | Deliberation | all prior output | `Reflection` | Meta-check: coverage, consistency, red flags, adjusts confidence |
 | 8 | `score_wisdom` | Judgment | reflection | `WisdomScore` | Computes 6-dimension wisdom score + per-advisor scores |
 | 9 | `generate_verdict` | Judgment | wisdom score | `Verdict` | Produces final decision + structured report |
@@ -141,6 +144,11 @@ class DeliberationState(BaseModel):
     question: str
     context: dict
     status: SessionStatus
+    steps: list[DeliberationStep]      # progress tracking
+    current_step: str | None
+    steps_completed: int
+    steps_total: int = 9
+    events: list[dict]                 # timeline of step events
     context_analysis: ContextAnalysis | None
     advisor_responses: list[AdvisorResponse]
     arguments: list[Argument]
@@ -154,6 +162,8 @@ class DeliberationState(BaseModel):
     error_message: str | None
     created_at: datetime
     completed_at: datetime | None
+    model_selections: list[InferenceSelection]
+    llm_call_logs: list[LLMCallLog]
 ```
 
 ---
@@ -165,8 +175,9 @@ class DeliberationState(BaseModel):
 **Purpose:** Represent diverse decision-making perspectives through structured persona profiles.
 
 **Components:**
-- **AdvisorRegistry** (`core/advisors/registry.py`) — In-memory registry of 6 default personas
-- **AdvisorEvaluator** (`core/advisors/evaluation.py`) — Criteria-based evaluation framework
+- **ContextAnalyzer** (`core/deliberation/analyzer.py`) — Keyword-based domain detection, stakeholder extraction, data gap identification
+- **AdvisorRegistry** (`core/advisors/registry.py`) — Registry of persona profiles; supports YAML/JSON config via `SABDO_ADVISOR_CONFIG` env var
+- **AdvisorEvaluator** (`core/advisors/evaluation.py`) — Criteria-based evaluation with heuristic keyword scoring
 
 Each persona has a **criteria matrix** that replaces free-form opinion with structured assessment:
 
@@ -179,7 +190,22 @@ Each persona has a **criteria matrix** that replaces free-form opinion with stru
 | Devil's Advocate | edge_cases, assumption_challenge, failure_modes, unintended_consequences | 0.30/0.25/0.25/0.20 |
 | Long-Term Strategist | systemic_impact, horizon_viability, adaptability, legacy_effect | 0.30/0.30/0.20/0.20 |
 
-### 3.2 Dharma Layer (Principle Engine)
+### 3.2 Inference & Backend Selection
+
+**Purpose:** Select the best AI inference backend per persona based on capability requirements.
+
+**Key files:** `core/inference/adapter.py`, `core/inference/registry.py`, `core/inference/selection.py`
+
+The system is **vendor-agnostic** — it doesn't hardcode provider-to-persona mappings. Instead:
+
+1. **Adapters** (`inference/adapters/`) self-report capabilities: structured output, context window, local/cloud, model list
+2. **InferenceRegistry** auto-discovers adapters via Python package discovery
+3. **BackendSelector** scores each adapter against each persona's `CapabilityRequirement` using a combined score: `declared × 0.7 + (verified/10) × 0.3`
+4. **VerifiedCapability** tracks historical performance: success rate, latency, structured output reliability, wisdom contribution
+
+When no adapters are available (no API keys configured), the system falls back to **simulated evaluation** using the `AdvisorEvaluator`.
+
+### 3.3 Dharma Layer (Principle Engine)
 
 **Purpose:** Evaluate decisions against universal ethical principles with context-aware weighting.
 
@@ -203,7 +229,7 @@ Each persona has a **criteria matrix** that replaces free-form opinion with stru
 | `healthcare` | Human Impact (0.35) + Fairness (0.25) |
 | `personal` | Human Impact (0.30) + Transparency (0.25) |
 
-### 3.3 Consequence Layer
+### 3.4 Consequence Layer
 
 **Purpose:** Explore possible outcomes without claiming prediction.
 
@@ -213,7 +239,7 @@ The `ScenarioExplorer` generates **12 scenarios** per deliberation:
 - **3 biases per horizon**: optimistic, pessimistic, most_likely
 - Each scenario includes: assumptions (with confidence scores), uncertainty level (low/medium/high), positive/negative outcomes, net impact score
 
-### 3.4 Reflection Layer
+### 3.5 Reflection Layer
 
 **Purpose:** Meta-cognitive check before final verdict.
 
@@ -225,7 +251,7 @@ The `ReflectionNode` performs 4 checks:
 
 Adjusts final confidence based on findings.
 
-### 3.5 Judgment Layer
+### 3.6 Judgment Layer
 
 **Purpose:** Compute wisdom score and generate final verdict.
 
@@ -240,11 +266,11 @@ Adjusts final confidence based on findings.
 | Uncertainty Handling | 0.15 | How well data gaps and risks are acknowledged |
 | Reversibility | 0.10 | Ability to undo or adjust the decision |
 
-### 3.6 Collective Memory Layer
+### 3.7 Collective Memory Layer
 
 **Purpose:** Learn from past decisions.
 
-The `CollectiveWisdomMemory` stores structured cases:
+The `CollectiveWisdomMemory` stores structured cases. Storage is in-memory by default, with an optional PostgreSQL backend when a database URL is configured.
 
 ```python
 class DecisionCase(BaseModel):
@@ -272,13 +298,13 @@ Supports: `save_session`, `record_outcome`, `find_similar_cases`, `get_stats`.
 | API Framework | FastAPI | Async, type-safe, auto OpenAPI docs |
 | AI Orchestration | LangGraph | State machine for multi-step AI workflows |
 | Data Validation | Pydantic v2 | Runtime type safety across all layers |
-| Database | PostgreSQL 16 | ACID-compliant, reliable storage |
-| Vector Search | pgvector | Semantic search for similar cases |
-| Cache / Queue | Redis | Rate limiting, session cache |
-| Frontend | Next.js 14 | SSR, React Server Components, TypeScript |
+| Database (future) | PostgreSQL 16 | ACID-compliant, reliable storage (schema ready via Alembic) |
+| Vector Search (future) | pgvector | Semantic search for similar cases |
+| Adapters | provider-agnostic | OpenAI-compatible, Anthropic, Ollama interfaces |
+| Frontend (future) | Next.js 14 | SSR, React Server Components, TypeScript |
 | Containerization | Docker Compose | Single-command local dev and deployment |
-| Observability | OpenTelemetry | Vendor-neutral traces, metrics, logs |
-| Testing | pytest + vitest | 64+ tests across all modules |
+| Observability | OpenTelemetry | Vendor-neutral traces (console exporter) |
+| Testing | pytest | 81 tests across all modules |
 
 ---
 
@@ -288,15 +314,15 @@ Supports: `save_session`, `record_outcome`, `find_similar_cases`, `get_stats`.
 Client
   │ POST /api/v1/deliberate {question, context, config}
   ▼
-FastAPI — validates request, creates session
+FastAPI — validates request, creates session, spawns background task
   │
-  ▼
+  ▼ (async)
 DeliberationGraph.run(state)
   │
-  ├── analyze_context ──────► ContextAnalysis
-  ├── generate_perspectives ─► list[AdvisorResponse]  ──► AdvisorEvaluator
+  ├── analyze_context ──────► ContextAnalyzer (keyword-based)
+  ├── generate_perspectives ─► list[AdvisorResponse]  ──► BackendSelector + AdvisorEvaluator
   ├── collect_arguments ─────► list[Argument]
-  ├── resolve_conflicts ─────► list[Conflict]         ──► pairwise stance
+  ├── resolve_conflicts ─────► list[Conflict]         ──► 5 conflict types
   ├── evaluate_principles ───► list[PrincipleEvaluation] ──► PrincipleEngine + ProfileManager
   ├── explore_scenarios ─────► list[ScenarioExploration]  ──► ScenarioExplorer
   ├── reflect ───────────────► Reflection              ──► ReflectionNode
@@ -304,10 +330,10 @@ DeliberationGraph.run(state)
   └── generate_verdict ──────► Verdict                 ──► ExplainabilityReporter
   │
   ▼
-CollectiveWisdomMemory.save_session(state)
+CollectiveWisdomMemory.save_session(state)  ──► in-memory + optional PostgreSQL
   │
   ▼
-Response — verdict + report back to client
+Response — verdict + report back to client via polling / WebSocket
 ```
 
 ---
@@ -316,11 +342,11 @@ Response — verdict + report back to client
 
 | Scenario | Strategy |
 |----------|----------|
-| Advisor timeout | Configurable per-provider; mark as unavailable |
+| No inference adapters available | Fall back to simulated evaluation (heuristic scoring) |
+| Inference call fails | Record failure in VerifiedCapability, fall back to simulated |
 | Partial advisor failure | Continue with remaining; note exclusion in report |
 | All advisors fail | Return error with diagnostic information |
-| Rate limiting | Exponential backoff with jitter |
-| Database loss | Connection pool with retry and circuit breaker |
+| Database unavailable | Graceful fallback to in-memory storage |
 
 ---
 
@@ -328,9 +354,8 @@ Response — verdict + report back to client
 
 | Concern | Implementation |
 |---------|----------------|
-| API Key Storage | Environment variables or mounted secrets |
-| Provider Credentials | Vault integration (planned) |
+| API Key Storage | Environment variables |
+| Provider Credentials | Per-adapter env vars (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.) |
 | Input Sanitization | Pydantic validation on all endpoints |
-| Rate Limiting | Redis-backed rate limiter |
 | CORS | Strict origin configuration |
-| Audit Trail | All deliberations logged immutably |
+| Audit Trail | All LLM calls logged via LLMCallLog, stored in verdict |

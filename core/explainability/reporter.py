@@ -212,13 +212,16 @@ class ExplainabilityReporter:
             parts.append("-" * 60)
             parts.append("  REFLECTION")
             parts.append("-" * 60)
-            notes = verdict.reflection.get("reflection_notes", [])
+            ref_data = verdict.reflection
+            if isinstance(ref_data, dict) and "reflection" in ref_data:
+                ref_data = ref_data["reflection"]
+            notes = ref_data.get("reflection_notes", [])
             for n in notes:
                 parts.append(f"  • {n}")
-            missing = verdict.reflection.get("missing_perspectives", [])
+            missing = ref_data.get("missing_perspectives", [])
             for m in missing:
                 parts.append(f"  ⚠ {m}")
-            issues = verdict.reflection.get("consistency_issues", [])
+            issues = ref_data.get("consistency_issues", [])
             for iss in issues:
                 parts.append(f"  ✗ {iss}")
 

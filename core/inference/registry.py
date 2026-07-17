@@ -5,21 +5,14 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, version 3.
 
+import importlib
 import logging
+import pkgutil
 from collections import defaultdict
 
 from core.inference.adapter import InferenceAdapter, InferenceCapabilities, VerifiedCapability
-from inference.adapters.anthropic import AnthropicAdapter
-from inference.adapters.ollama import OllamaAdapter
-from inference.adapters.openai_compat import OpenAICompatibleAdapter
 
 logger = logging.getLogger(__name__)
-
-_ADAPTER_CLASSES = [
-    OpenAICompatibleAdapter,
-    AnthropicAdapter,
-    OllamaAdapter,
-]
 
 
 class InferenceRegistry:
@@ -29,21 +22,41 @@ class InferenceRegistry:
         self._discover()
 
     def _discover(self) -> None:
-        for cls in _ADAPTER_CLASSES:
-            try:
-                adapter = cls()
-                caps = adapter.capabilities
-                aid = adapter.adapter_id
-                if aid in self._verified:
-                    caps.verified = self._verified[aid]
+        self._discover_package("inference.adapters")
+
+    def _discover_package(self, package_name: str) -> None:
+        try:
+            pkg = importlib.import_module(package_name)
+            for importer, modname, ispkg in pkgutil.walk_packages(path=pkg.__path__, prefix=f"{package_name}."):
+                if ispkg:
+                    continue
+                try:
+                    mod = importlib.import_module(modname)
+                    for attr_name in dir(mod):
+                        attr = getattr(mod, attr_name)
+                        if isinstance(attr, type) and issubclass(attr, InferenceAdapter) and attr is not InferenceAdapter:
+                            self._try_register(attr)
+                except Exception as exc:
+                    logger.debug("Skipping adapter module %s: %s", modname, exc)
+        except ImportError:
+            logger.info("No adapter package found at %s", package_name)
+
+    def _try_register(self, cls: type) -> None:
+        try:
+            adapter = cls()
+            caps = adapter.capabilities
+            aid = adapter.adapter_id
+            if aid in self._verified:
+                caps.verified = self._verified[aid]
+            if caps.available or aid in self._verified:
                 logger.info(
                     "Discovered adapter '%s': %d model(s), declared=%.1f, verified=%.1f",
                     aid, len(caps.models),
                     caps.declared_score, caps.verified_score,
                 )
                 self._adapters[aid] = adapter
-            except Exception as exc:
-                logger.debug("Skipping adapter %s: %s", cls.__name__, exc)
+        except Exception as exc:
+            logger.debug("Skipping adapter class %s: %s", cls.__name__, exc)
 
     def register(self, adapter: InferenceAdapter) -> None:
         aid = adapter.adapter_id
