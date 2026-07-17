@@ -4,7 +4,7 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.x     | :white_check_mark: |
+| 0.1.0     | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
@@ -12,7 +12,7 @@ We take the security of Sabdo Pandito Ratu seriously. If you believe you have fo
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them via email to the maintainers at **[your-email@example.com]**.
+Instead, please report them via email to the maintainers at **[hello@optimaseo.id]**.
 
 You should receive a response within 48 hours. If for some reason you do not, please follow up via email to ensure we received your original message.
 
