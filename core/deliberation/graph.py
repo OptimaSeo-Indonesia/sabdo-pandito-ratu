@@ -13,10 +13,8 @@ from core.advisors.registry import AdvisorRegistry
 from core.deliberation.reflection import ReflectionNode
 from core.evaluation.scorer import WisdomScorer
 from core.explainability.reporter import ExplainabilityReporter
-from core.llm.config import LLMConfig
-from core.llm.model_registry import ModelRegistry
-from core.llm.provider_registry import ProviderRegistry
-from core.llm.selection import ModelSelectionEngine
+from core.inference.registry import InferenceRegistry
+from core.inference.selection import InferenceSelectionEngine
 from core.models import (
     AdvisorPersona,
     AdvisorResponse,
@@ -30,7 +28,6 @@ from core.models import (
 from core.principles.engine import PrincipleEngine
 from core.principles.profiles import PrincipleProfileManager
 from core.simulation.simulator import ScenarioExplorer
-from providers.factory import AdvisorFactory
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +43,8 @@ class DeliberationGraph:
         reflection: ReflectionNode | None = None,
         scorer: WisdomScorer | None = None,
         reporter: ExplainabilityReporter | None = None,
-        llm_config: LLMConfig | None = None,
-        model_registry: ModelRegistry | None = None,
-        provider_registry: ProviderRegistry | None = None,
-        selection_engine: ModelSelectionEngine | None = None,
+        inference_registry: InferenceRegistry | None = None,
+        selection_engine: InferenceSelectionEngine | None = None,
     ):
         self.registry = registry or AdvisorRegistry()
         self.evaluator = evaluator or AdvisorEvaluator()
@@ -59,16 +54,11 @@ class DeliberationGraph:
         self.reflection = reflection or ReflectionNode()
         self.scorer = scorer or WisdomScorer()
         self.reporter = reporter or ExplainabilityReporter()
-        self._llm_config = llm_config or LLMConfig.from_env()
-        provider_registry = provider_registry or ProviderRegistry(self._llm_config)
-        self._provider_registry = provider_registry
-        self._model_registry = model_registry or ModelRegistry()
-        self._selection_engine = selection_engine or ModelSelectionEngine(
-            model_registry=self._model_registry,
-            provider_registry=provider_registry,
+        self._inference_registry = inference_registry or InferenceRegistry()
+        self._selection_engine = selection_engine or InferenceSelectionEngine(
+            registry=self._inference_registry,
         )
-        self._factory = AdvisorFactory(provider_registry)
-        self._has_providers = bool(self._provider_registry.list_available())
+        self._has_adapters = bool(self._inference_registry.list_available())
         self.graph = self._build()
 
     def _build(self) -> StateGraph:
@@ -116,34 +106,48 @@ class DeliberationGraph:
         selections: list = []
         call_logs: list = []
 
-        if self._has_providers:
+        if self._has_adapters:
             for profile in active:
                 selection = self._selection_engine.select(
                     persona=profile.persona,
                     requirement=profile.capability_requirements,
                 )
                 selections.append(selection)
+                if not selection.selected_adapter:
+                    logger.warning(
+                        "No adapter for %s, using simulated fallback",
+                        profile.persona.value,
+                    )
+                    self._fallback_response(profile, state, responses)
+                    continue
                 try:
-                    adapter = self._factory.create(selection, profile.persona.value)
-                    perspective = await self._selection_engine.call_with_logging(
+                    adapter = self._inference_registry.get(
+                        selection.selected_adapter
+                    )
+                    if adapter is None:
+                        self._fallback_response(profile, state, responses)
+                        continue
+                    perspective, log = await self._selection_engine.call_with_logging(
                         persona=profile.persona,
                         step="perspective",
                         adapter=adapter,
                         method_name="generate_perspective",
+                        advisor_id=profile.persona.value,
+                        system_prompt=profile.system_prompt,
                         question=state.question,
                         context=state.context,
+                        model=selection.selected_model,
                     )
-                    response, log = perspective
-                    responses.append(response)
+                    responses.append(perspective)
                     call_logs.append(log)
                 except Exception as exc:
                     logger.warning(
-                        "LLM call failed for %s, using simulated fallback: %s",
+                        "Inference call failed for %s, simulated fallback: %s",
                         profile.persona.value, exc,
                     )
                     self._fallback_response(profile, state, responses)
         else:
-            logger.info("No LLM providers available — using simulated evaluations")
+            logger.info("No inference adapters available — using simulated evaluations")
             for profile in active:
                 self._fallback_response(profile, state, responses)
 

@@ -122,11 +122,11 @@ class ModelMetadata(BaseModel):
     is_multimodal: bool = False
 
 
-class ModelSelection(BaseModel):
+class InferenceSelection(BaseModel):
     persona: AdvisorPersona
     requirements: CapabilityRequirement
+    selected_adapter: str
     selected_model: str
-    selected_provider: str
     selection_reason: str
     fallback_occurred: bool = False
     fallback_from: str | None = None
@@ -287,7 +287,7 @@ class Verdict(BaseModel):
     alternatives: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     scores: dict[str, float] = Field(default_factory=dict)
-    model_selections: list[ModelSelection] = Field(default_factory=list)
+    model_selections: list[InferenceSelection] = Field(default_factory=list)
     llm_call_logs: list[LLMCallLog] = Field(default_factory=list)
 
 
@@ -311,7 +311,7 @@ class DeliberationState(BaseModel):
     error_message: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: datetime | None = None
-    model_selections: list[ModelSelection] = Field(default_factory=list)
+    model_selections: list[InferenceSelection] = Field(default_factory=list)
     llm_call_logs: list[LLMCallLog] = Field(default_factory=list)
 
 

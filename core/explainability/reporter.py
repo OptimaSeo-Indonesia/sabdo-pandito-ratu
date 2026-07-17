@@ -119,7 +119,7 @@ class ExplainabilityReporter:
             report["model_selections"] = [
                 {
                     "persona": s.persona.value,
-                    "selected_provider": s.selected_provider,
+                    "selected_adapter": s.selected_adapter,
                     "selected_model": s.selected_model,
                     "selection_reason": s.selection_reason,
                     "fallback_occurred": s.fallback_occurred,
@@ -163,7 +163,7 @@ class ExplainabilityReporter:
             parts.append("-" * 60)
             for s in verdict.model_selections:
                 parts.append(
-                    f"  {s.persona.value:25s} → {s.selected_provider}/{s.selected_model}"
+                    f"  {s.persona.value:25s} → {s.selected_adapter}/{s.selected_model}"
                 )
                 if s.fallback_occurred:
                     parts.append(f"  {'':25s} ⚠ Fallback from {s.fallback_from}")
