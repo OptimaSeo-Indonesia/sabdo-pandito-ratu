@@ -5,13 +5,14 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, version 3.
 
-from core.inference.adapter import InferenceAdapter, InferenceCapabilities
+from core.inference.adapter import InferenceAdapter, InferenceCapabilities, VerifiedCapability
 from core.inference.registry import InferenceRegistry
-from core.inference.selection import InferenceSelectionEngine
+from core.inference.selection import BackendSelector
 
 __all__ = [
     "InferenceAdapter",
     "InferenceCapabilities",
+    "VerifiedCapability",
     "InferenceRegistry",
-    "InferenceSelectionEngine",
+    "BackendSelector",
 ]

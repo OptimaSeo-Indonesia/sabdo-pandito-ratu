@@ -14,7 +14,7 @@ from core.deliberation.reflection import ReflectionNode
 from core.evaluation.scorer import WisdomScorer
 from core.explainability.reporter import ExplainabilityReporter
 from core.inference.registry import InferenceRegistry
-from core.inference.selection import InferenceSelectionEngine
+from core.inference.selection import BackendSelector
 from core.models import (
     AdvisorPersona,
     AdvisorResponse,
@@ -44,7 +44,7 @@ class DeliberationGraph:
         scorer: WisdomScorer | None = None,
         reporter: ExplainabilityReporter | None = None,
         inference_registry: InferenceRegistry | None = None,
-        selection_engine: InferenceSelectionEngine | None = None,
+        selection_engine: BackendSelector | None = None,
     ):
         self.registry = registry or AdvisorRegistry()
         self.evaluator = evaluator or AdvisorEvaluator()
@@ -55,7 +55,7 @@ class DeliberationGraph:
         self.scorer = scorer or WisdomScorer()
         self.reporter = reporter or ExplainabilityReporter()
         self._inference_registry = inference_registry or InferenceRegistry()
-        self._selection_engine = selection_engine or InferenceSelectionEngine(
+        self._selection_engine = selection_engine or BackendSelector(
             registry=self._inference_registry,
         )
         self._has_adapters = bool(self._inference_registry.list_available())
@@ -140,10 +140,21 @@ class DeliberationGraph:
                     )
                     responses.append(perspective)
                     call_logs.append(log)
+                    self._selection_engine.record_call_outcome(
+                        adapter_id=selection.selected_adapter,
+                        success=True,
+                        latency_ms=log.latency_ms or 0,
+                        wisdom_contribution=perspective.confidence,
+                    )
                 except Exception as exc:
                     logger.warning(
                         "Inference call failed for %s, simulated fallback: %s",
                         profile.persona.value, exc,
+                    )
+                    self._selection_engine.record_call_outcome(
+                        adapter_id=selection.selected_adapter,
+                        success=False,
+                        latency_ms=0,
                     )
                     self._fallback_response(profile, state, responses)
         else:
