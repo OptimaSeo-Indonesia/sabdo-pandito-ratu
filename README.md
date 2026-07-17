@@ -224,4 +224,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 AGPL-3.0 — see [LICENSE](LICENSE) for details.
 
-Copyright (C) 2025 OptimaSeo Indonesia. All rights reserved under the GNU AGPL v3.
+Copyright (C) 2026 OptimaSeo Indonesia. All rights reserved under the GNU AGPL v3.
