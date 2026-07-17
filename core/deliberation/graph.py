@@ -4,6 +4,8 @@
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, version 3.
+import logging
+
 from langgraph.graph import END, StateGraph
 
 from core.advisors.evaluation import AdvisorEvaluator
@@ -11,6 +13,10 @@ from core.advisors.registry import AdvisorRegistry
 from core.deliberation.reflection import ReflectionNode
 from core.evaluation.scorer import WisdomScorer
 from core.explainability.reporter import ExplainabilityReporter
+from core.llm.config import LLMConfig
+from core.llm.model_registry import ModelRegistry
+from core.llm.provider_registry import ProviderRegistry
+from core.llm.selection import ModelSelectionEngine
 from core.models import (
     AdvisorPersona,
     AdvisorResponse,
@@ -24,6 +30,9 @@ from core.models import (
 from core.principles.engine import PrincipleEngine
 from core.principles.profiles import PrincipleProfileManager
 from core.simulation.simulator import ScenarioExplorer
+from providers.factory import AdvisorFactory
+
+logger = logging.getLogger(__name__)
 
 
 class DeliberationGraph:
@@ -37,6 +46,10 @@ class DeliberationGraph:
         reflection: ReflectionNode | None = None,
         scorer: WisdomScorer | None = None,
         reporter: ExplainabilityReporter | None = None,
+        llm_config: LLMConfig | None = None,
+        model_registry: ModelRegistry | None = None,
+        provider_registry: ProviderRegistry | None = None,
+        selection_engine: ModelSelectionEngine | None = None,
     ):
         self.registry = registry or AdvisorRegistry()
         self.evaluator = evaluator or AdvisorEvaluator()
@@ -46,6 +59,16 @@ class DeliberationGraph:
         self.reflection = reflection or ReflectionNode()
         self.scorer = scorer or WisdomScorer()
         self.reporter = reporter or ExplainabilityReporter()
+        self._llm_config = llm_config or LLMConfig.from_env()
+        provider_registry = provider_registry or ProviderRegistry(self._llm_config)
+        self._provider_registry = provider_registry
+        self._model_registry = model_registry or ModelRegistry()
+        self._selection_engine = selection_engine or ModelSelectionEngine(
+            model_registry=self._model_registry,
+            provider_registry=provider_registry,
+        )
+        self._factory = AdvisorFactory(provider_registry)
+        self._has_providers = bool(self._provider_registry.list_available())
         self.graph = self._build()
 
     def _build(self) -> StateGraph:
@@ -90,33 +113,73 @@ class DeliberationGraph:
     async def _step_perspectives(self, state: DeliberationState) -> dict:
         responses: list[AdvisorResponse] = []
         active = self.registry.list_active()
+        selections: list = []
+        call_logs: list = []
 
-        for profile in active:
-            evaluation = self.evaluator.evaluate(
-                persona=profile.persona,
-                question=state.question,
-                context=state.context,
-            )
-            response = AdvisorResponse(
-                advisor_id=f"{profile.persona.value}",
-                persona=profile.persona,
-                stance="neutral",
-                summary=evaluation.argument,
-                reasoning=(
-                    f"Criterion scores: "
-                    f"{', '.join(f'{c.name}={c.score}' for c in evaluation.criteria)}"
-                ),
-                confidence=round(evaluation.overall_score / 10, 2),
-                key_points=[c.rationale for c in evaluation.criteria[:3]],
-                data_sources=[],
-                assumptions=[],
-            )
-            responses.append(response)
+        if self._has_providers:
+            for profile in active:
+                selection = self._selection_engine.select(
+                    persona=profile.persona,
+                    requirement=profile.capability_requirements,
+                )
+                selections.append(selection)
+                try:
+                    adapter = self._factory.create(selection, profile.persona.value)
+                    perspective = await self._selection_engine.call_with_logging(
+                        persona=profile.persona,
+                        step="perspective",
+                        adapter=adapter,
+                        method_name="generate_perspective",
+                        question=state.question,
+                        context=state.context,
+                    )
+                    response, log = perspective
+                    responses.append(response)
+                    call_logs.append(log)
+                except Exception as exc:
+                    logger.warning(
+                        "LLM call failed for %s, using simulated fallback: %s",
+                        profile.persona.value, exc,
+                    )
+                    self._fallback_response(profile, state, responses)
+        else:
+            logger.info("No LLM providers available — using simulated evaluations")
+            for profile in active:
+                self._fallback_response(profile, state, responses)
 
         return {
             "status": SessionStatus.GENERATING_PERSPECTIVES,
             "advisor_responses": [r.model_dump() for r in responses],
+            "model_selections": [s.model_dump() for s in selections],
+            "llm_call_logs": [l.model_dump() for l in call_logs],
         }
+
+    def _fallback_response(
+        self,
+        profile,
+        state: DeliberationState,
+        responses: list[AdvisorResponse],
+    ) -> None:
+        evaluation = self.evaluator.evaluate(
+            persona=profile.persona,
+            question=state.question,
+            context=state.context,
+        )
+        response = AdvisorResponse(
+            advisor_id=f"{profile.persona.value}",
+            persona=profile.persona,
+            stance="neutral",
+            summary=evaluation.argument,
+            reasoning=(
+                f"Criterion scores: "
+                f"{', '.join(f'{c.name}={c.score}' for c in evaluation.criteria)}"
+            ),
+            confidence=round(evaluation.overall_score / 10, 2),
+            key_points=[c.rationale for c in evaluation.criteria[:3]],
+            data_sources=[],
+            assumptions=[],
+        )
+        responses.append(response)
 
     async def _step_arguments(self, state: DeliberationState) -> dict:
         arguments: list[Argument] = []

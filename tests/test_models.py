@@ -26,11 +26,10 @@ def test_advisor_profile_creation():
         name="Rational Analyst",
         description="Data-driven analysis",
         system_prompt="You are a rational analyst",
-        provider="openai",
-        model="gpt-4",
     )
     assert profile.persona == AdvisorPersona.RATIONAL_ANALYST
     assert profile.active is True
+    assert profile.capability_requirements is not None
 
 
 def test_deliberation_state_defaults():

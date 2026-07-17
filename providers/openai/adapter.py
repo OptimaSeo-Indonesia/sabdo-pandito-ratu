@@ -23,7 +23,7 @@ class OpenAIAdvisor(BaseAdvisor):
 
     async def generate_perspective(self, question: str, context: dict) -> Perspective:
         response = await self.client.chat.completions.create(
-            model=self.model,
+            model=self.model_name,
             messages=[
                 {
                     "role": "system",
@@ -50,7 +50,7 @@ class OpenAIAdvisor(BaseAdvisor):
         self, perspectives: list[Perspective]
     ) -> Argument:
         response = await self.client.chat.completions.create(
-            model=self.model,
+            model=self.model_name,
             messages=[
                 {
                     "role": "system",
@@ -78,7 +78,7 @@ class OpenAIAdvisor(BaseAdvisor):
         self, arguments: list[Argument], question: str
     ) -> dict:
         response = await self.client.chat.completions.create(
-            model=self.model,
+            model=self.model_name,
             messages=[
                 {
                     "role": "system",

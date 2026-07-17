@@ -44,8 +44,6 @@ def test_registry_register_and_remove():
         name="Custom",
         description="Custom",
         system_prompt="Custom prompt",
-        provider="custom",
-        model="custom-model",
     )
     registry.register(new)
     gotten = registry.get(AdvisorPersona.DEVILS_ADVOCATE)
@@ -55,15 +53,16 @@ def test_registry_register_and_remove():
     assert registry.get(AdvisorPersona.DEVILS_ADVOCATE) is None
 
 
-def test_set_provider():
+def test_update_requirements():
     registry = AdvisorRegistry()
-    registry.set_provider(
-        AdvisorPersona.ECONOMIC, provider="ollama", model="llama3"
+    registry.update_requirements(
+        AdvisorPersona.ECONOMIC,
+        requirements={"reasoning": 10, "numerical_reasoning": 10},
     )
     profile = registry.get(AdvisorPersona.ECONOMIC)
     assert profile is not None
-    assert profile.provider == "ollama"
-    assert profile.model == "llama3"
+    assert profile.capability_requirements.reasoning == 10
+    assert profile.capability_requirements.numerical_reasoning == 10
 
 
 def test_default_profiles_have_all_fields():
@@ -72,6 +71,5 @@ def test_default_profiles_have_all_fields():
         assert p.name
         assert p.description
         assert p.system_prompt
-        assert p.provider
-        assert p.model
+        assert p.capability_requirements is not None
         assert p.priority_weights

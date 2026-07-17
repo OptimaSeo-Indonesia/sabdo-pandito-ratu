@@ -23,7 +23,7 @@ class AnthropicAdvisor(BaseAdvisor):
 
     async def generate_perspective(self, question: str, context: dict) -> Perspective:
         response = await self.client.messages.create(
-            model=self.model,
+            model=self.model_name,
             max_tokens=2000,
             system="You are an AI advisor. Analyze the question and provide a structured perspective in JSON.",
             messages=[
@@ -50,7 +50,7 @@ class AnthropicAdvisor(BaseAdvisor):
         self, perspectives: list[Perspective]
     ) -> Argument:
         response = await self.client.messages.create(
-            model=self.model,
+            model=self.model_name,
             max_tokens=2000,
             system="Review the perspectives and offer a counter-argument in JSON.",
             messages=[
@@ -75,7 +75,7 @@ class AnthropicAdvisor(BaseAdvisor):
         self, arguments: list[Argument], question: str
     ) -> dict:
         response = await self.client.messages.create(
-            model=self.model,
+            model=self.model_name,
             max_tokens=2000,
             system="You are a neutral judge. Evaluate the arguments and produce a final verdict in JSON.",
             messages=[

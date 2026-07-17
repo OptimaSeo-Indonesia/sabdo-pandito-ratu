@@ -73,6 +73,15 @@ async def test_graph_all_nine_steps():
 
 
 @pytest.mark.asyncio
+async def test_graph_llm_selection_fields():
+    graph = DeliberationGraph()
+    state = DeliberationState(question="Test")
+    result = await graph.run(state)
+    assert "model_selections" in result
+    assert "llm_call_logs" in result
+
+
+@pytest.mark.asyncio
 async def test_graph_reflection_in_verdict():
     graph = DeliberationGraph()
     state = DeliberationState(question="Test")

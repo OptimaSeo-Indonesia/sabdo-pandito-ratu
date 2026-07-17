@@ -41,6 +41,8 @@ class ExplainabilityReporter:
             alternatives=self._generate_alternatives(state),
             recommendations=self._generate_recommendations(state),
             scores=state.scores,
+            model_selections=state.model_selections,
+            llm_call_logs=state.llm_call_logs,
         )
 
     def generate_report(self, state: DeliberationState) -> dict:
@@ -48,7 +50,7 @@ class ExplainabilityReporter:
             state.verdict = self.build_verdict(state)
         v = state.verdict
 
-        return {
+        report: dict = {
             "case": {
                 "session_id": str(state.session_id),
                 "question": state.question,
@@ -113,6 +115,37 @@ class ExplainabilityReporter:
             "recommendations": v.recommendations,
         }
 
+        if v.model_selections:
+            report["model_selections"] = [
+                {
+                    "persona": s.persona.value,
+                    "selected_provider": s.selected_provider,
+                    "selected_model": s.selected_model,
+                    "selection_reason": s.selection_reason,
+                    "fallback_occurred": s.fallback_occurred,
+                    "fallback_from": s.fallback_from,
+                }
+                for s in v.model_selections
+            ]
+
+        if v.llm_call_logs:
+            report["llm_call_logs"] = [
+                {
+                    "persona": l.persona.value,
+                    "provider": l.provider,
+                    "model": l.model,
+                    "step": l.step,
+                    "latency_ms": l.latency_ms,
+                    "success": l.success,
+                    "error_message": l.error_message,
+                    "retry_count": l.retry_count,
+                    "fallback_occurred": l.fallback_occurred,
+                }
+                for l in v.llm_call_logs
+            ]
+
+        return report
+
     def generate_summary(self, verdict: Verdict) -> str:
         parts = [
             "=" * 60,
@@ -122,6 +155,19 @@ class ExplainabilityReporter:
             f"  DECISION: {verdict.decision}",
             f"  CONFIDENCE: {verdict.confidence:.0%}",
         ]
+
+        if verdict.model_selections:
+            parts.append("")
+            parts.append("-" * 60)
+            parts.append("  MODEL SELECTION")
+            parts.append("-" * 60)
+            for s in verdict.model_selections:
+                parts.append(
+                    f"  {s.persona.value:25s} → {s.selected_provider}/{s.selected_model}"
+                )
+                if s.fallback_occurred:
+                    parts.append(f"  {'':25s} ⚠ Fallback from {s.fallback_from}")
+                parts.append(f"  {'':25s}   Reason: {s.selection_reason}")
 
         if verdict.wisdom_score:
             parts.append(f"  WISDOM SCORE: {verdict.wisdom_score.overall}/100")

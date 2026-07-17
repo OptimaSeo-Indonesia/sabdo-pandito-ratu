@@ -31,9 +31,9 @@ class AdvisorRegistry:
     def remove(self, persona: AdvisorPersona) -> None:
         self._profiles.pop(persona, None)
 
-    def set_provider(
-        self, persona: AdvisorPersona, provider: str, model: str
+    def update_requirements(
+        self, persona: AdvisorPersona, requirements: dict
     ) -> None:
         if persona in self._profiles:
-            self._profiles[persona].provider = provider
-            self._profiles[persona].model = model
+            from core.models import CapabilityRequirement
+            self._profiles[persona].capability_requirements = CapabilityRequirement(**requirements)

@@ -90,15 +90,81 @@ PERSONA_SYSTEM_PROMPTS: dict[AdvisorPersona, str] = {
 
 # ─── Core Models ────────────────────────────────────────────────
 
+class CapabilityRequirement(BaseModel):
+    reasoning: int = Field(default=5, ge=0, le=10)
+    structured_output: bool = True
+    nuanced_language: bool = False
+    ethical_reasoning: int = Field(default=0, ge=0, le=10)
+    numerical_reasoning: int = Field(default=0, ge=0, le=10)
+    long_context: bool = False
+    high_reliability: bool = False
+
+
+class ModelCapability(BaseModel):
+    reasoning: int = Field(default=5, ge=0, le=10)
+    structured_output: bool = True
+    nuanced_language: bool = False
+    ethical_reasoning: int = Field(default=0, ge=0, le=10)
+    numerical_reasoning: int = Field(default=0, ge=0, le=10)
+    long_context: bool = False
+    high_reliability: bool = False
+    cost_efficiency: int = Field(default=5, ge=0, le=10)
+
+
+class ModelMetadata(BaseModel):
+    id: str
+    provider: str
+    display_name: str
+    context_window: int = 8192
+    capability: ModelCapability = Field(default_factory=ModelCapability)
+    latency: str = "medium"
+    is_local: bool = False
+    is_multimodal: bool = False
+
+
+class ModelSelection(BaseModel):
+    persona: AdvisorPersona
+    requirements: CapabilityRequirement
+    selected_model: str
+    selected_provider: str
+    selection_reason: str
+    fallback_occurred: bool = False
+    fallback_from: str | None = None
+
+
+class LLMCallLog(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    persona: AdvisorPersona
+    provider: str
+    model: str
+    step: str
+    latency_ms: int | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    success: bool = True
+    error_message: str | None = None
+    retry_count: int = 0
+    fallback_occurred: bool = False
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class AdvisorProfile(BaseModel):
     persona: AdvisorPersona
     name: str
     description: str
     system_prompt: str
-    provider: str
-    model: str
     active: bool = True
     priority_weights: dict[str, float] = Field(default_factory=dict)
+    capability_requirements: CapabilityRequirement = Field(default_factory=CapabilityRequirement)
+
+
+class Perspective(BaseModel):
+    advisor_id: str
+    stance: str = "neutral"
+    summary: str = ""
+    reasoning: str = ""
+    confidence: float = Field(default=0.5, ge=0, le=1)
+    key_points: list[str] = Field(default_factory=list)
 
 
 class AdvisorResponse(BaseModel):
@@ -221,6 +287,8 @@ class Verdict(BaseModel):
     alternatives: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     scores: dict[str, float] = Field(default_factory=dict)
+    model_selections: list[ModelSelection] = Field(default_factory=list)
+    llm_call_logs: list[LLMCallLog] = Field(default_factory=list)
 
 
 # ─── Deliberation State ─────────────────────────────────────────
@@ -243,6 +311,8 @@ class DeliberationState(BaseModel):
     error_message: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: datetime | None = None
+    model_selections: list[ModelSelection] = Field(default_factory=list)
+    llm_call_logs: list[LLMCallLog] = Field(default_factory=list)
 
 
 # ─── Collective Wisdom Memory ───────────────────────────────────

@@ -27,7 +27,7 @@ class OllamaAdvisor(BaseAdvisor):
             response = await client.post(
                 f"{self.base_url}/api/generate",
                 json={
-                    "model": self.model,
+                    "model": self.model_name,
                     "prompt": prompt,
                     "stream": False,
                     "format": "json",
