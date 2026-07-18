@@ -160,6 +160,7 @@ export default function Session() {
                     stepsTotal={status.progress.steps_total}
                     confidence={status.verdict?.confidence}
                     wisdomScore={status.verdict?.wisdom_score ?? undefined}
+                    advisorStatuses={status.advisor_statuses}
                   />
                 </div>
 

@@ -65,6 +65,7 @@ interface CouncilChamberProps {
   conflictsActive?: number;
   confidence?: number;
   wisdomScore?: number;
+  advisorStatuses?: Array<{ persona: string; stance: string; confidence: number }>;
 }
 
 export function CouncilChamber({
@@ -76,6 +77,7 @@ export function CouncilChamber({
   conflictsActive = 0,
   confidence,
   wisdomScore,
+  advisorStatuses,
   className,
 }: CouncilChamberProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -83,6 +85,26 @@ export function CouncilChamber({
 
   const [phase, setPhase] = useState<Phase>("idle");
   const activePhase = externalPhase || phase;
+
+  useEffect(() => {
+    if (!advisorStatuses) return;
+    setAdvisorStates((prev) =>
+      prev.map((s) => {
+        const match = advisorStatuses.find((a) => a.persona === s.id);
+        if (!match) return s;
+        return {
+          ...s,
+          status: "thinking" as const,
+          confidence: match.confidence,
+          stance: match.stance,
+          progress: Math.round(match.confidence * 100),
+          statusLabel: THINKING_PHRASES[s.id]
+            ? pick(THINKING_PHRASES[s.id])
+            : "Analyzing",
+        };
+      })
+    );
+  }, [advisorStatuses]);
 
   const [advisorStates, setAdvisorStates] = useState<AdvisorState[]>(() =>
     ADVISORS.map((a) => ({ id: a.id, status: "idle", statusLabel: pick(IDLE_PHRASES), progress: 0 }))
