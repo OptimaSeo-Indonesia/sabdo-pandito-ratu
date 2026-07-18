@@ -1,49 +1,19 @@
 # Reference Background Specification
 
-The background consists of **6 layers**.
+The background uses a solid dark color with layered elements.
 
-## Layer 1: Dark Gradient
+## Page Background
 
-```
-Top:    #0B1020
-Bottom: #04060A
-```
+- Color: `#03020a` (very dark, near black with slight blue tint)
+- Applied via `bg-[#03020a]` on the root element
+- CSS variable: `--background: 227 76% 5%` (`#050917`)
 
-Very dark. No solid black.
+## Background Elements
 
-## Layer 2: Aurora
+| Layer | Element | Description |
+|-------|---------|-------------|
+| 1 | Solid dark | `#03020a` page background |
+| 2 | Gunungan | PNG image, absolute, top 7.4%, left -10.7%, width 32.2%, opacity 60% |
+| 3 | Radial glow | Behind council area (from advisor node glow effects) |
 
-- Very soft
-- Blue and purple tones
-- Opacity: 15%
-- Large blur
-- Slow animation
-
-## Layer 3: Neural Grid
-
-- Very subtle
-- Opacity: 3%
-- Thin lines
-- Grid pattern
-
-## Layer 4: Gunungan
-
-- SVG, center aligned
-- Outline only, no fill
-- Gold color
-- Opacity: 2–4%
-- Blur: 2px
-- Users should almost not notice it
-
-## Layer 5: Floating Particles
-
-- Radius: 2px
-- Opacity: 15%
-- Animation: slow, floating
-
-## Layer 6: Radial Glow
-
-- Center positioned
-- Blue to purple
-- Very soft
-- Behind council area
+No glassmorphism, no aurora effects, no particle systems.
