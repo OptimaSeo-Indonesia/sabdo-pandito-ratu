@@ -1,20 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { startDeliberation, startDryRun } from "../lib/api";
 import { cn } from "../lib/utils";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
 import { CouncilChamber } from "../components/council/CouncilChamber";
+import { DeliberationTimeline } from "../components/deliberation/DeliberationTimeline";
 import {
   Send,
   Upload,
   Mic,
-  ArrowRight,
   Sparkles,
+  LayoutGrid,
+  List,
   Loader2,
+  Lightbulb,
 } from "lucide-react";
-import type { CouncilPhase } from "../components/council/types";
 
 const EXAMPLE_PROMPTS = [
   "Should universal basic income be implemented globally?",
@@ -23,217 +22,272 @@ const EXAMPLE_PROMPTS = [
   "Should remote work become the standard?",
 ];
 
+const ADVISOR_STATUSES = [
+  { id: "sage", name: "Sage", desc: "Evaluating principles...", pct: 78, iconColor: "text-primary", barGradient: "bg-grad-sage", bgClass: "bg-primary/10 border-primary/30" },
+  { id: "strategist", name: "Strategist", desc: "Mapping implications...", pct: 62, iconColor: "text-[#3D9BFF]", barGradient: "bg-grad-strategist", bgClass: "bg-[#3D9BFF]/10 border-[#3D9BFF]/30" },
+  { id: "guardian", name: "Guardian", desc: "Scanning risks...", pct: 91, iconColor: "text-accent", barGradient: "bg-grad-guardian", bgClass: "bg-accent/10 border-accent/30" },
+  { id: "analyst", name: "Analyst", desc: "Analyzing evidence...", pct: 85, iconColor: "text-[#00C896]", barGradient: "bg-grad-analyst", bgClass: "bg-[#00C896]/10 border-[#00C896]/30" },
+  { id: "visionary", name: "Visionary", desc: "Exploring alternatives...", pct: 70, iconColor: "text-[#5B8FFF]", barGradient: "bg-grad-visionary", bgClass: "bg-[#5B8FFF]/10 border-[#5B8FFF]/30" },
+  { id: "ethicist", name: "Ethicist", desc: "Checking fairness...", pct: 66, iconColor: "text-[#FF4FA3]", barGradient: "bg-grad-ethicist", bgClass: "bg-[#FF4FA3]/10 border-[#FF4FA3]/30" },
+];
+
+const DELIBERATION_STEPS = [
+  { name: "question_received", label: "Question Received", status: "completed" as const },
+  { name: "context_analysis", label: "Context Analysis", status: "completed" as const },
+  { name: "perspective_generation", label: "Perspective Generation", status: "in_progress" as const },
+  { name: "conflict_detection", label: "Conflict Detection", status: "pending" as const },
+  { name: "ethical_review", label: "Ethical Review", status: "pending" as const },
+  { name: "reflection", label: "Reflection", status: "pending" as const },
+  { name: "consensus_building", label: "Consensus Building", status: "pending" as const },
+  { name: "final_verdict", label: "Final Verdict", status: "pending" as const },
+];
+
 export default function Home() {
   const navigate = useNavigate();
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useDryRun, setUseDryRun] = useState(false);
-  const [councilPhase, setCouncilPhase] = useState<CouncilPhase>("idle");
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (councilPhase === "idle") {
-        setCouncilPhase("deliberating");
-        setTimeout(() => setCouncilPhase("idle"), 3000);
-      }
-    }, 8000);
-    return () => clearInterval(timer);
-  }, [councilPhase]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!question.trim()) return;
     setLoading(true);
     setError(null);
-    setCouncilPhase("deliberating");
     try {
       const fn = useDryRun ? startDryRun : startDeliberation;
       const result = await fn(question);
       navigate(`/session/${result.session_id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
-      setCouncilPhase("idle");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="relative min-h-screen">
-      <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6 }}
-          className="text-center"
-        >
-          <Badge variant="default" className="mb-4 inline-flex px-4 py-1.5 text-xs font-medium uppercase tracking-wider">
-            <Sparkles className="mr-1.5 h-3 w-3" />
-            Multi-AI Deliberation Engine
-          </Badge>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+    <>
+      {/* Header Row */}
+      <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-[56px] font-bold leading-[1.05] tracking-tight">
             Sabdo{" "}
-            <span className="text-gradient">Pandito</span>{" "}
-            Ratu
+            <span className="text-gradient-brand">Pandito Ratu</span>
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground sm:text-[22px] sm:leading-relaxed">
+          <p className="text-accent font-semibold text-xl">
+            Multi-AI Deliberation Engine
+          </p>
+          <p className="text-muted text-sm leading-6 max-w-[320px]">
             Multiple AI advisors analyze, debate, reflect, and produce transparent decisions.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, delay: 0.15 }}
-          className="mx-auto mt-12 max-w-2xl sm:max-w-3xl lg:max-w-4xl"
-        >
-          <CouncilChamber phase={councilPhase} />
-        </motion.div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center rounded-[10px] bg-button-secondary p-1 gap-0">
+            <button className="flex items-center justify-center h-8 w-8 rounded-md bg-background text-foreground">
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button className="flex items-center justify-center h-8 w-8 rounded-md text-muted hover:text-foreground">
+              <List className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2 bg-button-secondary rounded-[10px] px-3 py-1.5">
+            <div className="h-6 w-6 rounded-full bg-gradient-primary-btn flex items-center justify-center text-[10px] font-bold text-white">
+              PU
+            </div>
+            <div>
+              <p className="text-xs font-medium text-foreground leading-tight">Pandita Utama</p>
+              <p className="text-[10px] text-muted leading-tight">Admin</p>
+            </div>
+            <span className="ml-1 text-[9px] font-bold uppercase text-white bg-grad-primary-btn rounded-md px-1.5 py-0.5 leading-normal">
+              Pro
+            </span>
+          </div>
+        </div>
+      </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.35 }}
-          className="mx-auto mt-12 w-full max-w-[900px]"
-        >
-          <form onSubmit={handleSubmit}>
-            <div className="glass-card group relative overflow-hidden" style={{ padding: 28 }}>
-              <div className="shimmer pointer-events-none absolute inset-0 opacity-0 group-focus-within:opacity-100" />
-              <div className="relative space-y-5">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="question" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Submit a Question
-                  </label>
-                  <span
-                    className={cn(
-                      "text-xs tabular-nums text-muted-foreground",
-                      question.length > 500 && "text-destructive"
-                    )}
-                  >
-                    {question.length}/1000
-                  </span>
-                </div>
+      {/* Main Grid */}
+      <div className="flex flex-1 gap-6 overflow-hidden" style={{ minHeight: 0 }}>
+        {/* Left Column */}
+        <div className="flex flex-1 flex-col gap-6 overflow-auto">
+          {/* Council Diagram */}
+          <CouncilChamber />
 
+          {/* Question Input */}
+          <section
+            className="w-full rounded-2xl p-4"
+            style={{
+              backgroundColor: "#070D22",
+              border: "1px solid rgba(108, 99, 255, 0.22)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.35)",
+            }}
+          >
+            <h2 className="text-base font-semibold text-foreground mb-4">
+              Submit a Question to the Council
+            </h2>
+            <form onSubmit={handleSubmit}>
+              <div
+                className="rounded-[10px] mb-3"
+                style={{
+                  backgroundColor: "#050A1B",
+                  border: "1px solid rgba(108, 99, 255, 0.16)",
+                  position: "relative",
+                }}
+              >
                 <textarea
                   ref={inputRef}
-                  id="question"
                   value={question}
-                  onChange={(e) => setQuestion(e.target.value.slice(0, 1000))}
+                  onChange={(e) => setQuestion(e.target.value.slice(0, 2000))}
                   rows={4}
-                  maxLength={1000}
-                  className="w-full resize-none bg-transparent text-base placeholder:text-muted-foreground/40 focus:outline-none"
-                  placeholder="What ethical framework should guide the development of artificial general intelligence?"
+                  maxLength={2000}
+                  className="w-full bg-transparent rounded-[10px] px-4 py-3 text-sm text-foreground placeholder:text-muted outline-none resize-none"
+                  placeholder="Ask anything. The council will deliberate with wisdom and transparency..."
+                  style={{ minHeight: "100px" }}
                 />
+                <span className="absolute bottom-2 right-3 text-[11px] text-muted">
+                  {question.length} / 2000
+                </span>
+              </div>
 
-                <div className="flex flex-wrap gap-1.5">
-                  {EXAMPLE_PROMPTS.map((prompt) => (
-                    <button
-                      key={prompt}
-                      type="button"
-                      onClick={() => {
-                        setQuestion(prompt);
-                        inputRef.current?.focus();
-                      }}
-                      className="rounded-lg border border-white/10 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
-                    >
-                      {prompt.length > 35 ? prompt.slice(0, 35) + "..." : prompt}
-                    </button>
-                  ))}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs text-muted"
+                    style={{ backgroundColor: "#111633", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    Upload Context
+                  </button>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs text-muted"
+                    style={{ backgroundColor: "#111633", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    <Mic className="h-3.5 w-3.5" />
+                    Voice Input
+                  </button>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs text-muted"
+                    style={{ backgroundColor: "#111633", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    <Lightbulb className="h-3.5 w-3.5" />
+                    Suggestions
+                  </button>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-white/5"
+                <div className="flex items-center gap-3">
+                  <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
+                    <input
+                      type="checkbox"
+                      checked={useDryRun}
+                      onChange={(e) => setUseDryRun(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div
+                      className="flex h-5 w-9 rounded-full items-center px-0.5 transition-colors"
+                      style={{ backgroundColor: useDryRun ? "#6C63FF" : "#1A1F36" }}
                     >
-                      <Upload className="h-3.5 w-3.5" />
-                      Context
-                    </button>
-                    <button
-                      type="button"
-                      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-white/5"
-                    >
-                      <Mic className="h-3.5 w-3.5" />
-                      Voice
-                    </button>
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-white/5">
-                      <input
-                        type="checkbox"
-                        checked={useDryRun}
-                        onChange={(e) => setUseDryRun(e.target.checked)}
-                        className="sr-only"
-                      />
                       <div
                         className={cn(
-                          "flex h-4 w-7 rounded-full border transition-colors",
-                          useDryRun
-                            ? "border-primary bg-primary"
-                            : "border-white/20 bg-transparent"
+                          "h-4 w-4 rounded-full bg-white transition-transform",
+                          useDryRun && "translate-x-4"
                         )}
-                      >
-                        <div
-                          className={cn(
-                            "h-3.5 w-3.5 rounded-full bg-white transition-transform",
-                            useDryRun && "translate-x-3"
-                          )}
-                        />
-                      </div>
-                      Dry Run
-                    </label>
-                  </div>
-
-                  <Button
+                      />
+                    </div>
+                    Dry Run (No LLM Calls)
+                  </label>
+                  <button
                     type="submit"
-                    size="lg"
                     disabled={loading || !question.trim()}
-                    className="group relative overflow-hidden"
+                    className="flex items-center gap-2 rounded-[10px] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:pointer-events-none"
+                    style={{
+                      background: "linear-gradient(90deg, #A44BFF 0%, #6C63FF 100%)",
+                      boxShadow: "0 8px 24px rgba(108, 99, 255, 0.35)",
+                      minWidth: "140px",
+                    }}
                   >
-                    <AnimatePresence mode="wait">
-                      {loading ? (
-                        <motion.span
-                          key="loading"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="flex items-center gap-2"
-                        >
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Submitting...
-                        </motion.span>
-                      ) : (
-                        <motion.span
-                          key="idle"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="flex items-center gap-2"
-                        >
-                          <Send className="h-4 w-4" />
-                          Deliberate
-                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </Button>
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    {loading ? "Submitting..." : "Deliberate"}
+                  </button>
                 </div>
-
-                {error && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-sm text-destructive"
-                  >
-                    {error}
-                  </motion.p>
-                )}
               </div>
+
+              {error && (
+                <p className="mt-2 text-xs text-danger">{error}</p>
+              )}
+            </form>
+          </section>
+        </div>
+
+        {/* Right Column - 380px */}
+        <div className="flex w-[380px] shrink-0 flex-col gap-6 overflow-auto">
+          {/* Deliberation Progress */}
+          <section
+            className="bg-card rounded-2xl p-4 flex flex-col gap-0"
+            style={{
+              border: "1px solid rgba(108, 99, 255, 0.22)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.35)",
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-base font-semibold text-foreground">
+                Deliberation Progress
+              </span>
+              <span className="flex items-center gap-1 text-[11px] font-medium text-success">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                </span>
+                Live
+              </span>
             </div>
-          </form>
-        </motion.div>
+
+            <DeliberationTimeline steps={DELIBERATION_STEPS} />
+          </section>
+
+          {/* Council Status */}
+          <section
+            className="bg-card rounded-[18px] p-4"
+            style={{
+              border: "1px solid rgba(108, 99, 255, 0.22)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.35)",
+            }}
+          >
+            <h2 className="text-base font-semibold text-foreground mb-4">
+              Council Status
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {ADVISOR_STATUSES.map((a) => {
+                const Icon = a.id === "sage" ? Sparkles : a.id === "strategist" ? Lightbulb : a.id === "guardian" ? Upload : a.id === "analyst" ? Send : a.id === "visionary" ? Sparkles : Upload;
+                return (
+                  <div key={a.id} className="flex items-start gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${a.bgClass}`}>
+                      <Icon className={`h-4 w-4 ${a.iconColor}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground leading-tight">{a.name}</p>
+                      <p className="text-[10px] text-muted leading-tight truncate">{a.desc}</p>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <div className="flex-1 h-[3px] rounded-full bg-status-track overflow-hidden">
+                          <div className={`h-full rounded-full ${a.barGradient}`} style={{ width: `${a.pct}%` }} />
+                        </div>
+                        <span className="text-[10px] text-muted font-medium shrink-0">{a.pct}%</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

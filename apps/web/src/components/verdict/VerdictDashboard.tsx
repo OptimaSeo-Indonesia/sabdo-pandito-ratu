@@ -82,7 +82,7 @@ function InsightCard({
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 + index * 0.05 }}
-      className="glass-card flex items-center gap-3 p-4"
+      className="bg-card card-ref flex items-center gap-3 p-4"
     >
       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}>
         <Icon className="h-5 w-5 text-white" />
@@ -112,7 +112,7 @@ function ReasoningTree({
   ];
 
   return (
-    <div className="glass-card overflow-hidden rounded-[20px]">
+    <div className="bg-card card-ref overflow-hidden rounded-2xl">
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center justify-between p-4 transition-colors hover:bg-white/5"
@@ -163,7 +163,7 @@ function ReasoningTree({
 function CollapsibleSection({ title, icon: Icon, children, defaultOpen = false }: { title: string; icon: typeof Brain; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="glass-card overflow-hidden rounded-[20px]">
+    <div className="bg-card card-ref overflow-hidden rounded-2xl">
       <button
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between p-4 transition-colors hover:bg-white/5"
@@ -207,7 +207,7 @@ export function VerdictDashboard({ verdict, report }: VerdictDashboardProps) {
         <div className="space-y-6 lg:col-span-2">
           {/* Executive Summary */}
           {verdict.summary && (
-            <div className="glass-card rounded-[20px] p-5">
+            <div className="bg-card card-ref rounded-2xl p-5">
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {verdict.summary}
               </p>
@@ -290,7 +290,7 @@ export function VerdictDashboard({ verdict, report }: VerdictDashboardProps) {
 
         <div className="space-y-6">
           {/* Confidence & Wisdom gauges */}
-          <div className="glass-card rounded-[20px] p-5">
+          <div className="bg-card card-ref rounded-2xl p-5">
             <div className="flex justify-center gap-8">
               <Gauge value={overallScore} label="Wisdom" color="#4F8CFF" />
               <Gauge value={confidencePct} label="Confidence" color="#34D399" />
@@ -299,7 +299,7 @@ export function VerdictDashboard({ verdict, report }: VerdictDashboardProps) {
 
           {/* Wisdom dimensions */}
           {ws && (
-            <div className="glass-card rounded-[20px] p-5">
+            <div className="bg-card card-ref rounded-2xl p-5">
               <h3 className="mb-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Wisdom Dimensions
               </h3>
@@ -333,7 +333,7 @@ export function VerdictDashboard({ verdict, report }: VerdictDashboardProps) {
 
           {/* Recommendations */}
           {report.recommendations.length > 0 && (
-            <div className="glass-card rounded-[20px] p-5">
+            <div className="bg-card card-ref rounded-2xl p-5">
               <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Recommendations
               </h3>

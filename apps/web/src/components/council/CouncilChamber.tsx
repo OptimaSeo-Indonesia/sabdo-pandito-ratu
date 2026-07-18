@@ -1,64 +1,45 @@
-import { useState, useEffect, useCallback, useRef } from "react";
 import { AdvisorNode } from "./AdvisorNode";
-import { NeuralNetwork } from "./NeuralNetwork";
 import { CouncilCore } from "./CouncilCore";
 import { cn } from "../../lib/utils";
 import {
   Brain, Scale, Shield, Eye, Lightbulb, Sparkles,
 } from "lucide-react";
-import type { AdvisorData, AdvisorState, NeuralConnection, ConnectionState } from "./types";
+import type { AdvisorData } from "./types";
 
 const ADVISORS: AdvisorData[] = [
-  { id: "sage", name: "Sage", role: "Wisdom & Ethics", color: "from-violet-500 to-purple-700", icon: Brain },
-  { id: "guardian", name: "Guardian", role: "Risk & Security", color: "from-amber-500 to-orange-700", icon: Shield },
-  { id: "strategist", name: "Strategist", role: "Long-term Planning", color: "from-blue-500 to-indigo-700", icon: Eye },
-  { id: "analyst", name: "Analyst", role: "Evidence & Logic", color: "from-emerald-500 to-teal-700", icon: Scale },
-  { id: "ethicist", name: "Ethicist", role: "Fairness & Rights", color: "from-rose-500 to-pink-700", icon: Sparkles },
-  { id: "visionary", name: "Visionary", role: "Innovation", color: "from-cyan-500 to-blue-700", icon: Lightbulb },
+  { id: "sage", name: "Sage", role: "Wisdom & Ethics", color: "#A855F7", icon: Brain },
+  { id: "guardian", name: "Guardian", role: "Risk & Security", color: "#F59E0B", icon: Shield },
+  { id: "strategist", name: "Strategist", role: "Long-term Planning", color: "#3B82F6", icon: Eye },
+  { id: "analyst", name: "Analyst", role: "Evidence & Logic", color: "#10B981", icon: Scale },
+  { id: "ethicist", name: "Ethicist", role: "Fairness & Rights", color: "#EC4899", icon: Sparkles },
+  { id: "visionary", name: "Visionary", role: "Innovation", color: "#3B82F6", icon: Lightbulb },
 ];
 
-const IDLE_PHRASES = [
-  "Awaiting query", "Standing by", "Prepared", "Ready",
-];
-
-const THINKING_PHRASES: Record<string, string[]> = {
-  sage: ["Evaluating ethics", "Weighing values", "Assessing wisdom", "Synthesizing"],
-  guardian: ["Scanning risks", "Assessing threats", "Evaluating safety", "Stability check"],
-  strategist: ["Projecting impact", "Analyzing systems", "Mapping scenarios", "Calculating"],
-  analyst: ["Gathering evidence", "Cross-referencing", "Confidence rising", "Scoring"],
-  ethicist: ["Checking fairness", "Rights impact", "Scanning bias", "Inclusivity"],
-  visionary: ["Exploring ideas", "Connecting dots", "Generating paths", "Synthesizing"],
+const POSITIONS: Record<string, { top: string; left: string }> = {
+  sage: { top: "0%", left: "50%" },
+  strategist: { top: "22%", left: "82%" },
+  ethicist: { top: "62%", left: "82%" },
+  visionary: { top: "84%", left: "50%" },
+  analyst: { top: "62%", left: "18%" },
+  guardian: { top: "22%", left: "18%" },
 };
 
-const POSITIONS = {
-  sage: { x: 50, y: 8 },
-  guardian: { x: 16, y: 27 },
-  strategist: { x: 84, y: 27 },
-  core: { x: 50, y: 48 },
-  analyst: { x: 16, y: 67 },
-  ethicist: { x: 84, y: 67 },
-  visionary: { x: 50, y: 85 },
-};
+const SVG_VIEWBOX = "0 0 700 560";
 
-const BASE_CONNECTIONS: NeuralConnection[] = [
-  { from: "sage", to: "guardian", state: "idle" }, { from: "sage", to: "strategist", state: "idle" },
-  { from: "guardian", to: "strategist", state: "idle" }, { from: "guardian", to: "analyst", state: "idle" },
-  { from: "strategist", to: "ethicist", state: "idle" }, { from: "analyst", to: "ethicist", state: "idle" },
-  { from: "analyst", to: "visionary", state: "idle" }, { from: "ethicist", to: "visionary", state: "idle" },
-  { from: "sage", to: "core", state: "idle" }, { from: "guardian", to: "core", state: "idle" },
-  { from: "strategist", to: "core", state: "idle" }, { from: "analyst", to: "core", state: "idle" },
-  { from: "ethicist", to: "core", state: "idle" }, { from: "visionary", to: "core", state: "idle" },
-  { from: "guardian", to: "ethicist", state: "idle" }, { from: "strategist", to: "analyst", state: "idle" },
+// Hexagon vertices matching advisor positions
+const HEX_POINTS = [
+  { x: 350, y: 28 },   // sage
+  { x: 574, y: 123 },  // strategist
+  { x: 574, y: 347 },  // ethicist
+  { x: 350, y: 470 },  // visionary
+  { x: 126, y: 347 },  // analyst
+  { x: 126, y: 123 },  // guardian
 ];
-
-function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
-
-type Phase = "idle" | "deliberating" | "conflict" | "reflecting" | "consensus" | "verdict";
 
 interface CouncilChamberProps {
   className?: string;
   compact?: boolean;
-  phase?: Phase;
+  phase?: string;
   consensusLevel?: number;
   stepsComplete?: number;
   stepsTotal?: number;
@@ -68,170 +49,104 @@ interface CouncilChamberProps {
   advisorStatuses?: Array<{ persona: string; stance: string; confidence: number }>;
 }
 
-export function CouncilChamber({
-  compact = false,
-  phase: externalPhase,
-  consensusLevel: extConsensus = 0,
-  stepsComplete = 0,
-  stepsTotal = 9,
-  conflictsActive = 0,
-  confidence,
-  wisdomScore,
-  advisorStatuses,
-  className,
-}: CouncilChamberProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: 400, height: 500 });
-
-  const [phase, setPhase] = useState<Phase>("idle");
-  const activePhase = externalPhase || phase;
-
-  useEffect(() => {
-    if (!advisorStatuses) return;
-    setAdvisorStates((prev) =>
-      prev.map((s) => {
-        const match = advisorStatuses.find((a) => a.persona === s.id);
-        if (!match) return s;
-        return {
-          ...s,
-          status: "thinking" as const,
-          confidence: match.confidence,
-          stance: match.stance,
-          progress: Math.round(match.confidence * 100),
-          statusLabel: THINKING_PHRASES[s.id]
-            ? pick(THINKING_PHRASES[s.id])
-            : "Analyzing",
-        };
-      })
-    );
-  }, [advisorStatuses]);
-
-  const [advisorStates, setAdvisorStates] = useState<AdvisorState[]>(() =>
-    ADVISORS.map((a) => ({ id: a.id, status: "idle", statusLabel: pick(IDLE_PHRASES), progress: 0 }))
-  );
-
-  const [connections, setConnections] = useState<NeuralConnection[]>(BASE_CONNECTIONS);
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const obs = new ResizeObserver((entries) => {
-      for (const e of entries) setSize({ width: e.contentRect.width, height: e.contentRect.height });
-    });
-    obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
-
-  const getPos = useCallback(
-    (id: string) => {
-      const p = POSITIONS[id as keyof typeof POSITIONS];
-      return p ? { x: (p.x / 100) * size.width, y: (p.y / 100) * size.height } : { x: 0, y: 0 };
-    },
-    [size]
-  );
-
-  // Idle animation cycle
-  useEffect(() => {
-    if (activePhase !== "idle") return;
-    const t = setInterval(() => {
-      setAdvisorStates((prev) =>
-        prev.map((s) => ({ ...s, statusLabel: Math.random() > 0.5 ? pick(IDLE_PHRASES) : s.statusLabel }))
-      );
-      setConnections((prev) =>
-        prev.map((c) => {
-          if (Math.random() > 0.85) return { ...c, state: "active" as ConnectionState };
-          return { ...c, state: "idle" as ConnectionState };
-        })
-      );
-      setTimeout(() => setConnections((prev) => prev.map((c) => ({ ...c, state: "idle" as ConnectionState }))), 1500);
-    }, 4000);
-    return () => clearInterval(t);
-  }, [activePhase]);
-
-  // Simulate deliberating connections
-  useEffect(() => {
-    if (activePhase === "idle" || activePhase === "verdict") return;
-    const t = setInterval(() => {
-      setConnections((prev) =>
-        prev.map((c) => {
-          const r = Math.random();
-          if (activePhase === "conflict") {
-            if ((c.from === "guardian" && c.to === "ethicist") || (c.from === "strategist" && c.to === "analyst"))
-              return { ...c, state: "conflict" as ConnectionState };
-            if (r > 0.6) return { ...c, state: "debating" as ConnectionState };
-          }
-          if (activePhase === "reflecting") {
-            if (r > 0.5) return { ...c, state: "reflection" as ConnectionState };
-          }
-          if (activePhase === "consensus") {
-            if (r > 0.4) return { ...c, state: "consensus" as ConnectionState };
-          }
-          if (r > 0.7) return { ...c, state: "active" as ConnectionState };
-          if (r > 0.85) return { ...c, state: "agree" as ConnectionState };
-          return { ...c, state: "active" as ConnectionState };
-        })
-      );
-    }, 3000);
-    return () => clearInterval(t);
-  }, [activePhase]);
-
-  // Verdict connections
-  useEffect(() => {
-    if (activePhase !== "verdict") return;
-    setConnections((prev) => prev.map((c) => ({ ...c, state: "consensus" as ConnectionState })));
-  }, [activePhase]);
+export function CouncilChamber({ className }: CouncilChamberProps) {
+  const hexString = HEX_POINTS.map(p => `${p.x},${p.y}`).join(" ");
 
   return (
-    <div
-      ref={ref}
+    <section
       className={cn(
-        "relative mx-auto w-full max-w-[620px]",
-        compact ? "aspect-square max-h-[380px]" : "aspect-square",
+        "bg-transparent relative overflow-hidden",
         className
       )}
+      style={{ minHeight: "580px" }}
     >
-      <NeuralNetwork
-        connections={connections}
-        positions={Object.fromEntries(
-          [...ADVISORS.map((a) => a.id), "core"].map((id) => [id, getPos(id)])
-        )}
-        width={size.width}
-        height={size.height}
-        phase={activePhase}
+      {/* Gunungan Background */}
+      <img
+        src="https://c.animaapp.com/mrqrcjormMWdDO/img/background-gunungan-illustration.png"
+        alt=""
+        className="pointer-events-none absolute opacity-60"
+        style={{ top: "7.4%", left: "-10.7%", width: "32.2%", aspectRatio: "277/553", zIndex: 0 }}
       />
 
-      {ADVISORS.map((a) => {
-        const pos = POSITIONS[a.id as keyof typeof POSITIONS];
-        const st = advisorStates.find((s) => s.id === a.id);
-        return (
-          <AdvisorNode
-            key={a.id}
-            name={a.name}
-            role={a.role}
-            icon={a.icon}
-            color={a.color}
-            status={st?.status || "idle"}
-            statusLabel={st?.statusLabel || ""}
-            progress={st?.progress || 0}
-            isActive={st?.status === "thinking" || st?.status === "conflict"}
-            score={st?.confidence != null ? Math.round(st.confidence * 100) : undefined}
-            scoreLabel={st?.stance}
-            style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: "translate(-50%, -50%)" }}
+      {/* SVG Connection Lines */}
+      <div className="relative" style={{ zIndex: 1, minHeight: "560px" }}>
+        <svg
+          viewBox={SVG_VIEWBOX}
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          {/* Hexagon outline */}
+          <polyline
+            points={hexString}
+            fill="none"
+            stroke="rgba(108, 99, 255, 0.25)"
+            strokeWidth="1.5"
+            strokeDasharray="4 4"
           />
-        );
-      })}
 
-      <CouncilCore
-        phase={activePhase}
-        stepsComplete={stepsComplete}
-        stepsTotal={stepsTotal}
-        consensusLevel={extConsensus}
-        conflictsActive={conflictsActive}
-        confidence={confidence}
-        wisdomScore={wisdomScore}
-        style={{ left: `${POSITIONS.core.x}%`, top: `${POSITIONS.core.y}%`, transform: "translate(-50%, -50%)" }}
-      />
-    </div>
+          {/* Center circle */}
+          <circle
+            cx="350" cy="248" r="90"
+            fill="none"
+            stroke="rgba(108, 99, 255, 0.25)"
+            strokeWidth="1"
+            strokeDasharray="3 3"
+          />
+
+          {/* Connection lines from center to each hex vertex */}
+          {HEX_POINTS.map((p, i) => (
+            <line
+              key={i}
+              x1="350" y1="248"
+              x2={p.x} y2={p.y}
+              stroke="rgba(108, 99, 255, 0.2)"
+              strokeWidth="1"
+              strokeDasharray="4 4"
+            />
+          ))}
+
+          {/* Inner junction points */}
+          {HEX_POINTS.map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r="3" fill="rgba(108, 99, 255, 0.4)" />
+          ))}
+
+          {/* Outer hexagonal ring dots */}
+          {HEX_POINTS.map((p, i) => (
+            <circle key={`outer-${i}`} cx={p.x} cy={p.y} r="4" fill="rgba(108, 99, 255, 0.15)" />
+          ))}
+        </svg>
+
+        {/* Advisor Nodes */}
+        {ADVISORS.map((a) => {
+          const pos = POSITIONS[a.id];
+          return (
+            <AdvisorNode
+              key={a.id}
+              advisor={a}
+              style={{
+                position: "absolute",
+                top: pos.top,
+                left: pos.left,
+                transform: "translateX(-50%)",
+                zIndex: 10,
+              }}
+            />
+          );
+        })}
+
+        {/* Council Core */}
+        <CouncilCore
+          style={{
+            position: "absolute",
+            top: "37%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 20,
+          }}
+        />
+      </div>
+    </section>
   );
 }
 
-export { ADVISORS, THINKING_PHRASES, IDLE_PHRASES, POSITIONS };
+export { ADVISORS, POSITIONS };

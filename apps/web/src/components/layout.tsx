@@ -1,159 +1,86 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useTheme } from "./theme-provider";
 import { cn } from "../lib/utils";
-import { Background } from "./background/Background";
 import {
-  Sun,
-  Moon,
   Sparkles,
   Home,
+  Layers,
   History,
+  Users,
   BookOpen,
   Settings,
-  User,
-  Menu,
-  X,
+  BarChart3,
+  Heart,
 } from "lucide-react";
-import { Button } from "./ui/button";
-import { useState } from "react";
 
-const NAV_ITEMS = [
+const SIDEBAR_ITEMS = [
   { to: "/", label: "Home", icon: Home },
+  { to: "/deliberations", label: "Deliberations", icon: Layers },
   { to: "/sessions", label: "History", icon: History },
-  { to: "/docs", label: "Documentation", icon: BookOpen },
+  { to: "/council", label: "Council", icon: Users },
+  { to: "/knowledge", label: "Knowledge", icon: BookOpen },
+  { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const { theme, toggle } = useTheme();
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <Background />
-      <nav className="sticky top-0 z-50 h-[72px] border-b border-white/10 bg-white/[0.03] backdrop-blur-[18px] supports-[backdrop-filter]:bg-white/[0.02]">
-        <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-[#3A6FD8] shadow-lg shadow-primary/20">
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">
-              Sabdo{" "}
-              <span className="text-gradient">Pandito</span>{" "}
-              Ratu
-            </span>
+    <div className="flex min-h-screen flex-col bg-[#03020a] text-foreground">
+      <div className="flex flex-1">
+        <aside className="flex w-[240px] shrink-0 flex-col bg-sidebar py-5 px-3 overflow-hidden">
+          <Link to="/" className="flex items-center gap-2 px-4 mb-6">
+            <img
+              src="https://c.animaapp.com/mrqrcjormMWdDO/img/brand-logo-gunungan.png"
+              alt="Sabdo Pandito Ratu"
+              className="h-12 w-auto"
+            />
           </Link>
 
-          <div className="hidden items-center gap-1 md:flex">
-            {NAV_ITEMS.map((item) => {
+          <nav className="flex flex-col gap-0">
+            {SIDEBAR_ITEMS.map((item) => {
               const isActive = location.pathname === item.to;
+              const Icon = item.icon;
               return (
                 <Link
                   key={item.to}
                   to={item.to}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 px-4 py-[10px] rounded-[10px] text-sm font-medium transition-all",
                     isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-white/5"
+                      ? "bg-grad-active-nav border border-[rgba(108,99,255,0.55)] text-foreground"
+                      : "text-muted hover:text-foreground hover:bg-[rgba(108,99,255,0.06)]"
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted")} />
                   {item.label}
                 </Link>
               );
             })}
-            <div className="ml-2 h-5 w-px bg-white/10" />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggle}
-              className="ml-1 h-9 w-9"
-              aria-label="Toggle theme"
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              aria-label="Profile"
-            >
-              <User className="h-4 w-4" />
-            </Button>
+          </nav>
+
+          <div className="mt-auto px-1">
+            <div className="bg-card border border-[rgba(108,99,255,0.22)] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.35)] rounded-2xl">
+              <p className="text-xs text-muted mb-1">Wisdom Today</p>
+              <p className="text-lg font-bold text-foreground">3</p>
+              <p className="text-[11px] text-muted">Deliberations</p>
+              <div className="mt-2 h-[3px] rounded-full bg-status-track overflow-hidden">
+                <div className="h-full w-[91%] rounded-full bg-grad-primary-btn" />
+              </div>
+              <p className="mt-1 text-[11px] text-muted">91% Avg. Wisdom Score</p>
+            </div>
+
+            <p className="mt-4 text-[10px] text-muted text-center">
+              &copy; 2025 Sabdo Pandito Ratu
+            </p>
           </div>
+        </aside>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
-            {mobileOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </Button>
-        </div>
-
-        {mobileOpen && (
-          <div className="border-t border-white/10 bg-black/20 px-4 pb-4 pt-2 backdrop-blur-[18px] md:hidden">
-            {NAV_ITEMS.map((item) => {
-              const isActive = location.pathname === item.to;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-white/5"
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-            <button
-              onClick={toggle}
-              className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-white/5"
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-              {theme === "dark" ? "Light" : "Dark"} Mode
-            </button>
-          </div>
-        )}
-      </nav>
-
-      <main className="flex-1 px-4 sm:px-8 lg:px-[64px]">{children}</main>
-
-      <footer className="border-t border-white/10 py-8">
-        <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
-          <p className="text-sm text-muted-foreground">
-            Sabdo Pandito Ratu &mdash;{" "}
-            <span className="text-gradient font-medium">
-              Multi-AI Deliberation Engine
-            </span>
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground/60">
-            Open Source &middot; Transparent &middot; Reasoned Verdicts
-          </p>
-        </div>
-      </footer>
+        <main className="flex flex-1 flex-col p-6 gap-6 overflow-hidden">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
