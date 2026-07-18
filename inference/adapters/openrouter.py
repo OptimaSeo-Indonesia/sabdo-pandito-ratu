@@ -52,11 +52,12 @@ class OpenRouterAdapter(InferenceAdapter):
         model = model or "openai/gpt-4o"
         response = await self._client.chat.completions.create(
             model=model,
+            max_tokens=4000,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
-                    "content": f"Question: {question}\nContext: {context}",
+                    "content": f"Question: {question}\nContext: {context}\nRespond in JSON format with keys: stance, summary, reasoning, confidence, key_points",
                 },
             ],
             response_format={"type": "json_object"},
@@ -86,11 +87,12 @@ class OpenRouterAdapter(InferenceAdapter):
         model = model or "openai/gpt-4o"
         response = await self._client.chat.completions.create(
             model=model,
+            max_tokens=4000,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
-                    "content": f"Perspectives: {[p.model_dump() for p in perspectives]}",
+                    "content": f"Perspectives: {[p.model_dump() for p in perspectives]}\nRespond in JSON format with keys: persona, claim, evidence, reasoning",
                 },
             ],
             response_format={"type": "json_object"},
@@ -119,11 +121,12 @@ class OpenRouterAdapter(InferenceAdapter):
         model = model or "openai/gpt-4o"
         response = await self._client.chat.completions.create(
             model=model,
+            max_tokens=4000,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
-                    "content": f"Question: {question}\nArguments: {[a.model_dump() for a in arguments]}",
+                    "content": f"Question: {question}\nArguments: {[a.model_dump() for a in arguments]}\nRespond in JSON format with keys: decision, confidence, summary, reasoning",
                 },
             ],
             response_format={"type": "json_object"},
