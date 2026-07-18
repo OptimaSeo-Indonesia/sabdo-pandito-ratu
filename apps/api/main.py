@@ -5,6 +5,7 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, version 3.
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,17 +17,20 @@ logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
-# ── OpenTelemetry instrumentation ────────────────────────────────
+# ── OpenTelemetry instrumentation (console only if OTEL_CONSOLE=true) ──
 try:
     from opentelemetry import trace
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
     resource = Resource.create({"service.name": "sabdo-pandito-ratu"})
     provider = TracerProvider(resource=resource)
-    provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+    if os.getenv("OTEL_CONSOLE", "").lower() in ("true", "1", "yes"):
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+
+        provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+        logger.info("OpenTelemetry console exporter enabled (OTEL_CONSOLE=true)")
     trace.set_tracer_provider(provider)
     _instrumented = True
     logger.info("OpenTelemetry instrumentation enabled")

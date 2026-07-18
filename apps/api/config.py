@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     embedding_dimension: int = 1536
     embedding_provider: str = "openai"
 
-    model_config = {"env_prefix": "", "case_sensitive": False, "env_file": ".env"}
+    model_config = {"env_prefix": "", "case_sensitive": False, "env_file": ".env", "extra": "ignore"}
 
 
 _settings: Settings | None = None
