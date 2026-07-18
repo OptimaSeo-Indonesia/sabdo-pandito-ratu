@@ -78,7 +78,7 @@ export default function Home() {
             <span className="text-gradient">Pandito</span>{" "}
             Ratu
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
+          <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground sm:text-[22px] sm:leading-relaxed">
             Multiple AI advisors analyze, debate, reflect, and produce transparent decisions.
           </p>
         </motion.div>
@@ -87,7 +87,7 @@ export default function Home() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="mx-auto mt-4 max-w-2xl sm:max-w-3xl lg:max-w-4xl"
+          className="mx-auto mt-12 max-w-2xl sm:max-w-3xl lg:max-w-4xl"
         >
           <CouncilChamber phase={councilPhase} />
         </motion.div>
@@ -96,12 +96,12 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.35 }}
-          className="mx-auto mt-6 max-w-2xl"
+          className="mx-auto mt-12 w-full max-w-[900px]"
         >
           <form onSubmit={handleSubmit}>
-            <div className="glass-card group relative overflow-hidden p-1">
+            <div className="glass-card group relative overflow-hidden" style={{ padding: 28 }}>
               <div className="shimmer pointer-events-none absolute inset-0 opacity-0 group-focus-within:opacity-100" />
-              <div className="relative space-y-4 rounded-xl p-5 sm:p-6">
+              <div className="relative space-y-5">
                 <div className="flex items-center justify-between">
                   <label htmlFor="question" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Submit a Question
@@ -121,7 +121,7 @@ export default function Home() {
                   id="question"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value.slice(0, 1000))}
-                  rows={3}
+                  rows={4}
                   maxLength={1000}
                   className="w-full resize-none bg-transparent text-base placeholder:text-muted-foreground/40 focus:outline-none"
                   placeholder="What ethical framework should guide the development of artificial general intelligence?"
@@ -136,30 +136,30 @@ export default function Home() {
                         setQuestion(prompt);
                         inputRef.current?.focus();
                       }}
-                      className="rounded-lg border border-border/40 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
+                      className="rounded-lg border border-white/10 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
                     >
                       {prompt.length > 35 ? prompt.slice(0, 35) + "..." : prompt}
                     </button>
                   ))}
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent"
+                      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-white/5"
                     >
                       <Upload className="h-3.5 w-3.5" />
                       Context
                     </button>
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent"
+                      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-white/5"
                     >
                       <Mic className="h-3.5 w-3.5" />
                       Voice
                     </button>
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-white/5">
                       <input
                         type="checkbox"
                         checked={useDryRun}
@@ -171,7 +171,7 @@ export default function Home() {
                           "flex h-4 w-7 rounded-full border transition-colors",
                           useDryRun
                             ? "border-primary bg-primary"
-                            : "border-border bg-transparent"
+                            : "border-white/20 bg-transparent"
                         )}
                       >
                         <div
