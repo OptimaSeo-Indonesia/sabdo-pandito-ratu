@@ -68,6 +68,7 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
         xl: "calc(var(--radius) + 4px)",
         "2xl": "calc(var(--radius) + 8px)",
+        "20px": "20px",
       },
       boxShadow: {
         glass: "0 8px 32px rgba(0, 0, 0, 0.12)",

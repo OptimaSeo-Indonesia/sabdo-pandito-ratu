@@ -3,7 +3,7 @@ export function GununganBg() {
     <div className="pointer-events-none fixed inset-0 flex items-center justify-center opacity-[0.03] dark:opacity-[0.04]">
       <svg
         viewBox="0 0 400 600"
-        className="h-[80vh] w-auto blur-[1px]"
+        className="h-[80vh] w-auto blur-[2px]"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
