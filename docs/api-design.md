@@ -279,7 +279,7 @@ GET /api/v1/sessions?status=completed&limit=20&offset=0
 }
 ```
 
-*Note: Session listing requires a database backend. Currently returns empty until PostgreSQL is connected.*
+*Note: Session listing returns data from the in-memory store. PostgreSQL persistence is optional — sessions survive only while the server is running without a database.*
 
 ### 2.5 Session Stats
 

@@ -287,7 +287,7 @@ class DecisionCase(BaseModel):
     reviewed_at: datetime | None
 ```
 
-Supports: `save_session`, `record_outcome`, `find_similar_cases`, `get_stats`.
+Supports: `save_session`, `get_session`, `save_verdict`, `record_outcome`, `find_similar_cases`, `list_sessions`, `get_advisor_insights`, `get_stats`.
 
 ---
 
@@ -301,7 +301,7 @@ Supports: `save_session`, `record_outcome`, `find_similar_cases`, `get_stats`.
 | Database (future) | PostgreSQL 16 | ACID-compliant, reliable storage (schema ready via Alembic) |
 | Vector Search (future) | pgvector | Semantic search for similar cases |
 | Adapters | provider-agnostic | OpenAI-compatible, Anthropic, Ollama interfaces |
-| Frontend (future) | Next.js 14 | SSR, React Server Components, TypeScript |
+| Frontend | Next.js 14 | Home page, live session polling, verdict/report display, history dashboard |
 | Containerization | Docker Compose | Single-command local dev and deployment |
 | Observability | OpenTelemetry | Vendor-neutral traces (console exporter) |
 | Testing | pytest | 81 tests across all modules |

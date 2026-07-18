@@ -198,7 +198,15 @@ class DeliberationGraph:
                         context=state.context,
                         model=selection.selected_model,
                     )
-                    responses.append(perspective)
+                    responses.append(AdvisorResponse(
+                        advisor_id=perspective.advisor_id,
+                        persona=profile.persona,
+                        stance=perspective.stance,
+                        summary=perspective.summary,
+                        reasoning=perspective.reasoning,
+                        confidence=perspective.confidence,
+                        key_points=perspective.key_points,
+                    ))
                     call_logs.append(log)
                     self._selection_engine.record_call_outcome(
                         adapter_id=selection.selected_adapter,

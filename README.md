@@ -189,7 +189,7 @@ sabdo-pandito-ratu/
 │   ├── api/              # FastAPI backend
 │   │   ├── routes/       # REST + WebSocket endpoints
 │   │   └── db/           # Alembic migrations + SQLAlchemy models
-│   └── web/              # Next.js frontend (scaffold)
+│   └── web/              # Next.js frontend
 ├── core/
 │   ├── deliberation/     # 9-step LangGraph pipeline + Reflection + Analyzer
 │   ├── advisors/         # Persona definitions, registry, evaluation

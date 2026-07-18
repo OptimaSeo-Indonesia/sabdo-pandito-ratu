@@ -1,12 +1,3 @@
-/*
- * Sabdo Pandito Ratu
- * Copyright (c) 2026 OptimaSeo
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, version 3.
- */
-
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -21,7 +12,23 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gray-50 text-gray-900">{children}</body>
+      <body className="min-h-screen bg-gray-50 text-gray-900">
+        <nav className="border-b bg-white shadow-sm">
+          <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+            <a href="/" className="text-lg font-bold tracking-tight">
+              Sabdo Pandito Ratu
+            </a>
+            <div className="flex gap-4 text-sm text-gray-500">
+              <a href="/" className="hover:text-gray-900">Home</a>
+              <a href="/sessions" className="hover:text-gray-900">History</a>
+            </div>
+          </div>
+        </nav>
+        {children}
+        <footer className="border-t bg-white py-6 text-center text-sm text-gray-400">
+          Sabdo Pandito Ratu &mdash; Open Source Deliberation Engine
+        </footer>
+      </body>
     </html>
   );
 }

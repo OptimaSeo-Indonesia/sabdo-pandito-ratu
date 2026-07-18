@@ -5,6 +5,7 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, version 3.
 import logging
+from collections import Counter
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -29,6 +30,7 @@ def _to_conflicts(conflicts: list) -> list:
 class CollectiveWisdomMemory:
     def __init__(self, db_url: str | None = None):
         self._cases: dict[str, DecisionCase] = {}
+        self._sessions: dict[UUID, DeliberationState] = {}
         self._db_url = db_url
         self._engine = None
         self._session_factory = None
@@ -47,6 +49,7 @@ class CollectiveWisdomMemory:
 
     async def save_session(self, state: DeliberationState) -> None:
         from apps.api.db.models import DeliberationSessionModel
+        self._sessions[state.session_id] = state
         domain = state.context_analysis.domain if state.context_analysis else "general"
         stakes = state.context_analysis.stakes if state.context_analysis else "unknown"
         time_sens = state.context_analysis.time_sensitivity if state.context_analysis else "moderate"
@@ -95,10 +98,50 @@ class CollectiveWisdomMemory:
                     session.close()
 
     async def get_session(self, session_id: UUID) -> DeliberationState | None:
+        if session_id in self._sessions:
+            return self._sessions[session_id]
+        session = self._db_session()
+        if session:
+            from apps.api.db.models import DeliberationSessionModel
+            try:
+                stmt = select(DeliberationSessionModel).where(
+                    DeliberationSessionModel.session_id == session_id
+                )
+                row = session.execute(stmt).scalar_one_or_none()
+                if row:
+                    return DeliberationState(
+                        session_id=row.session_id,
+                        question=row.question,
+                        context=row.context or {},
+                        status=row.status,
+                    )
+            except Exception as exc:
+                logger.error("Failed to get session from DB: %s", exc)
+            finally:
+                session.close()
         return None
 
     async def save_verdict(self, session_id: UUID, verdict: Verdict) -> None:
-        pass
+        if session_id in self._sessions:
+            state = self._sessions[session_id]
+            state.verdict = verdict
+        session = self._db_session()
+        if session:
+            from apps.api.db.models import DeliberationSessionModel
+            try:
+                stmt = select(DeliberationSessionModel).where(
+                    DeliberationSessionModel.session_id == session_id
+                )
+                row = session.execute(stmt).scalar_one_or_none()
+                if row:
+                    row.verdict = verdict.model_dump()
+                    session.commit()
+            except Exception as exc:
+                logger.error("Failed to save verdict to DB: %s", exc)
+                if session:
+                    session.rollback()
+            finally:
+                session.close()
 
     async def record_outcome(
         self,
@@ -150,7 +193,37 @@ class CollectiveWisdomMemory:
         return results[:top_k]
 
     async def get_advisor_insights(self) -> list[dict]:
-        return []
+        stance_counts: dict[str, Counter] = {}
+        confidence_by_persona: dict[str, list[float]] = {}
+        total_cases = len(self._sessions)
+
+        for state in self._sessions.values():
+            for resp in state.advisor_responses:
+                persona = resp.persona.value if hasattr(resp, 'persona') else resp.get('persona', 'unknown')
+                stance = resp.stance if hasattr(resp, 'stance') else resp.get('stance', 'neutral')
+                confidence = resp.confidence if hasattr(resp, 'confidence') else resp.get('confidence', 0.0)
+
+                if persona not in stance_counts:
+                    stance_counts[persona] = Counter()
+                stance_counts[persona][stance] += 1
+
+                if persona not in confidence_by_persona:
+                    confidence_by_persona[persona] = []
+                confidence_by_persona[persona].append(confidence)
+
+        insights = []
+        for persona in stance_counts:
+            total = sum(stance_counts[persona].values())
+            confs = confidence_by_persona.get(persona, [])
+            insights.append({
+                "persona": persona,
+                "total_appearances": total,
+                "stance_distribution": dict(stance_counts[persona]),
+                "avg_confidence": round(sum(confs) / len(confs), 2) if confs else 0.0,
+                "total_sessions": total_cases,
+            })
+
+        return insights
 
     async def list_sessions(
         self,
@@ -181,12 +254,15 @@ class CollectiveWisdomMemory:
                 return states, total
             except Exception as exc:
                 logger.error("Failed to list sessions from DB: %s", exc)
-                if session:
-                    session.close()
-                return [], 0
             finally:
                 if session:
                     session.close()
+        if self._sessions:
+            items = list(self._sessions.values())
+            items.sort(key=lambda s: s.created_at, reverse=True)
+            total = len(items)
+            paginated = items[offset:offset + limit]
+            return paginated, total
         return [], 0
 
     async def get_stats(self) -> dict:

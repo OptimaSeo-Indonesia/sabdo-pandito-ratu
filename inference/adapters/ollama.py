@@ -39,12 +39,14 @@ class OllamaAdapter(InferenceAdapter):
 
     @property
     def capabilities(self) -> InferenceCapabilities:
+        self._discover_models()
+        models = self._discovered_models or []
         return InferenceCapabilities(
             supports_structured_output=True,
             supports_streaming=False,
             supports_tools=False,
             context_window=8192,
-            models=["llama3.1", "qwen2.5"],
+            models=models,
             is_local=True,
         )
 
@@ -73,7 +75,7 @@ class OllamaAdapter(InferenceAdapter):
         model: str | None = None,
     ) -> Perspective:
         self._discover_models()
-        models = self._discovered_models or ["llama3.1", "qwen2.5"]
+        models = self._discovered_models or []
         prompt = (
             f"{system_prompt}\n\n"
             f"Question: {question}\nContext: {context}\n\n"
@@ -98,7 +100,7 @@ class OllamaAdapter(InferenceAdapter):
         model: str | None = None,
     ) -> Argument:
         self._discover_models()
-        models = self._discovered_models or ["llama3.1", "qwen2.5"]
+        models = self._discovered_models or []
         prompt = (
             f"{system_prompt}\n\n"
             f"Perspectives: {[p.model_dump() for p in perspectives]}\n\n"
@@ -122,7 +124,7 @@ class OllamaAdapter(InferenceAdapter):
         model: str | None = None,
     ) -> dict:
         self._discover_models()
-        models = self._discovered_models or ["llama3.1", "qwen2.5"]
+        models = self._discovered_models or []
         prompt = (
             f"{system_prompt}\n\n"
             f"Question: {question}\nArguments: {[a.model_dump() for a in arguments]}\n\n"

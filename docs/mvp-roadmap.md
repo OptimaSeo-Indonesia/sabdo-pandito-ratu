@@ -61,11 +61,11 @@ All core deliberation components are implemented and tested (64 tests, 84% cover
 - Structured decision report generation
 - In-memory collective wisdom case storage
 - REST API endpoints (deliberate, advisors, sessions)
-- WebSocket streaming stub
-- Next.js minimal frontend
+- WebSocket streaming for real-time progress
+- Next.js frontend with live session tracking and report visualization
 
 **Not yet connected (planned next):**
-- Real LLM provider calls (OpenAI, Anthropic, Ollama adapters need API keys)
+- Real LLM provider calls (OpenAI, Anthropic adapters need API keys; Ollama is local-only)
 - Database persistence (PostgreSQL + pgvector)
 - User authentication and multi-tenancy
 
