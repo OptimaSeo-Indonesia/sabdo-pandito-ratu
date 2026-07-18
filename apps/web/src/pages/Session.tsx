@@ -1,12 +1,7 @@
-"use client";
-
-import { useParams } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
-import {
-  getDeliberationStatus,
-  getDeliberationReport,
-} from "@/lib/api";
-import type { DeliberationStatus, FullReport } from "@/types/api";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { getDeliberationStatus, getDeliberationReport } from "../lib/api";
+import type { DeliberationStatus, FullReport } from "../types/api";
 
 const STEP_LABELS: Record<string, string> = {
   analyze_context: "Analyze Context",
@@ -236,36 +231,33 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-export default function SessionPage() {
-  const params = useParams();
-  const sessionId = params.id as string;
+export default function Session() {
+  const { id } = useParams<{ id: string }>();
   const [status, setStatus] = useState<DeliberationStatus | null>(null);
   const [report, setReport] = useState<FullReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!id) return;
 
     let cancelled = false;
     let pollTimer: ReturnType<typeof setTimeout>;
 
     async function poll() {
       try {
-        const s = await getDeliberationStatus(sessionId);
+        const s = await getDeliberationStatus(id!);
         if (cancelled) return;
         setStatus(s);
         if (s.status === "completed" || s.status === "failed") {
           if (s.status === "completed") {
-            const r = await getDeliberationReport(sessionId);
+            const r = await getDeliberationReport(id!);
             if (!cancelled) setReport(r);
           }
           return;
         }
         pollTimer = setTimeout(poll, 2000);
       } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unknown error");
-        }
+        if (!cancelled) setError(err instanceof Error ? err.message : "Unknown error");
       }
     }
 
@@ -274,7 +266,7 @@ export default function SessionPage() {
       cancelled = true;
       clearTimeout(pollTimer);
     };
-  }, [sessionId]);
+  }, [id]);
 
   if (error) return <ErrorState message={error} />;
   if (!status) return <div className="py-12 text-center"><Spinner /></div>;
@@ -286,7 +278,7 @@ export default function SessionPage() {
       <header className="mb-8">
         <h1 className="mb-1 text-2xl font-bold">Deliberation Session</h1>
         <p className="text-gray-600">{status.question}</p>
-        <p className="mt-1 text-xs text-gray-400">Session: {sessionId}</p>
+        <p className="mt-1 text-xs text-gray-400">Session: {id}</p>
       </header>
 
       {isRunning && <ProgressSteps steps={status.progress.steps} />}

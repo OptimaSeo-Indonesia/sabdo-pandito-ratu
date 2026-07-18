@@ -3,12 +3,11 @@ import type {
   DryRunResponse,
   DeliberationStatus,
   FullReport,
-  AdvisorProfile,
   SessionListItem,
   SessionStats,
-} from "@/types/api";
+} from "../types/api";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = "http://localhost:8000";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -55,10 +54,6 @@ export function getDeliberationReport(
   sessionId: string
 ): Promise<FullReport> {
   return request(`/api/v1/deliberate/${sessionId}/report`);
-}
-
-export function listAdvisors(): Promise<AdvisorProfile[]> {
-  return request("/api/v1/advisors");
 }
 
 export function listSessions(

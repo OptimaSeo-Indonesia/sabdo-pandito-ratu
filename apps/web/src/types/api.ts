@@ -132,13 +132,6 @@ export interface DryRunResponse {
   report: FullReport;
 }
 
-export interface AdvisorProfile {
-  persona: string;
-  name: string;
-  description: string;
-  active: boolean;
-}
-
 export interface SessionListItem {
   session_id: string;
   question: string;

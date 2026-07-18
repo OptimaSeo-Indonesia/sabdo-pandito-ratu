@@ -1,10 +1,9 @@
-"use client";
-
 import { useEffect, useState } from "react";
-import { listSessions, getSessionStats } from "@/lib/api";
-import type { SessionListItem, SessionStats } from "@/types/api";
+import { Link } from "react-router-dom";
+import { listSessions, getSessionStats } from "../lib/api";
+import type { SessionListItem, SessionStats } from "../types/api";
 
-export default function SessionsPage() {
+export default function Sessions() {
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [stats, setStats] = useState<SessionStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,16 +53,16 @@ export default function SessionsPage() {
 
       {!loading && sessions.length === 0 && (
         <p className="rounded-lg border bg-white p-6 text-center text-gray-500 shadow-sm">
-          No sessions yet. Submit a question on the home page.
+          No sessions yet. <Link to="/" className="text-blue-600 hover:underline">Submit a question</Link>
         </p>
       )}
 
       {sessions.length > 0 && (
         <div className="space-y-3">
           {sessions.map((s) => (
-            <a
+            <Link
               key={s.session_id}
-              href={`/session/${s.session_id}`}
+              to={`/session/${s.session_id}`}
               className="block rounded-lg border bg-white p-4 shadow-sm transition hover:shadow-md"
             >
               <div className="flex items-center justify-between">
@@ -73,7 +72,7 @@ export default function SessionsPage() {
                 </span>
               </div>
               <p className="mt-1 text-xs text-gray-400">{s.session_id}</p>
-            </a>
+            </Link>
           ))}
         </div>
       )}

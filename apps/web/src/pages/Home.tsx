@@ -1,11 +1,9 @@
-"use client";
-
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { startDeliberation, startDryRun } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
+import { startDeliberation, startDryRun } from "../lib/api";
 
 export default function Home() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,13 +15,9 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-      if (useDryRun) {
-        const result = await startDryRun(question);
-        router.push(`/session/${result.session_id}`);
-      } else {
-        const result = await startDeliberation(question);
-        router.push(`/session/${result.session_id}`);
-      }
+      const fn = useDryRun ? startDryRun : startDeliberation;
+      const result = await fn(question);
+      navigate(`/session/${result.session_id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
     } finally {
@@ -48,7 +42,7 @@ export default function Home() {
             onChange={(e) => setQuestion(e.target.value)}
             rows={4}
             className="mb-4 w-full rounded border p-3 text-sm"
-            placeholder="Ask a question for the council of AI advisors...&#10;&#10;Examples:&#10;• Should our startup pivot from B2C to B2B?&#10;• What are the ethical implications of using AI in hiring?&#10;• Should we invest in renewable energy for our factory?"
+            placeholder="Ask a question for the council of AI advisors..."
           />
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 text-sm text-gray-600">
