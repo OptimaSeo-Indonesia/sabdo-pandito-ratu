@@ -52,12 +52,20 @@ class OpenRouterAdapter(InferenceAdapter):
         model = model or "openai/gpt-4o"
         response = await self._client.chat.completions.create(
             model=model,
-            max_tokens=4000,
+            max_tokens=500,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
-                    "content": f"Question: {question}\nContext: {context}\nRespond in JSON format with keys: stance, summary, reasoning, confidence, key_points",
+                    "content": (
+                        f"Question: {question}\nContext: {context}\n\n"
+                        "Respond in JSON. Use this exact schema:\n"
+                        '{"stance": "yes|no|cautious_yes|cautious_no|neutral", '
+                        '"summary": "string", '
+                        '"reasoning": "string", '
+                        '"confidence": 0.0-1.0, '
+                        '"key_points": ["string", "..."]}'
+                    ),
                 },
             ],
             response_format={"type": "json_object"},
@@ -73,8 +81,8 @@ class OpenRouterAdapter(InferenceAdapter):
             stance=data.get("stance", "neutral"),
             summary=data.get("summary", ""),
             reasoning=data.get("reasoning", ""),
-            confidence=data.get("confidence", 0.5),
-            key_points=data.get("key_points", []),
+            confidence=float(data["confidence"]) if "confidence" in data and isinstance(data["confidence"], (int, float, str)) and str(data["confidence"]).replace(".", "").replace("-", "").isdigit() else 0.5,
+            key_points=data.get("key_points", []) if isinstance(data.get("key_points"), list) else [],
         )
 
     async def generate_counter_argument(
@@ -87,7 +95,7 @@ class OpenRouterAdapter(InferenceAdapter):
         model = model or "openai/gpt-4o"
         response = await self._client.chat.completions.create(
             model=model,
-            max_tokens=4000,
+            max_tokens=500,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
@@ -121,7 +129,7 @@ class OpenRouterAdapter(InferenceAdapter):
         model = model or "openai/gpt-4o"
         response = await self._client.chat.completions.create(
             model=model,
-            max_tokens=4000,
+            max_tokens=500,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
