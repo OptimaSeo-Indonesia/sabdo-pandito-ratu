@@ -10,15 +10,29 @@ export interface AdvisorData {
 
 export interface AdvisorState {
   id: string;
-  status: string;
+  status: "idle" | "thinking" | "conflict" | "done";
   statusLabel: string;
   progress: number;
   stance?: string;
   confidence?: number;
 }
 
-export type ConnectionState = "idle" | "active" | "agree" | "disagree" | "conflict" | "consensus";
-export type CouncilPhase = "idle" | "deliberating" | "conflict" | "reflecting" | "consensus" | "verdict";
+export type ConnectionState =
+  | "idle"
+  | "active"
+  | "agree"
+  | "debating"
+  | "conflict"
+  | "reflection"
+  | "consensus";
+
+export type CouncilPhase =
+  | "idle"
+  | "deliberating"
+  | "conflict"
+  | "reflecting"
+  | "consensus"
+  | "verdict";
 
 export interface NeuralConnection {
   from: string;

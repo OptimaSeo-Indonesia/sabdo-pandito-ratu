@@ -4,20 +4,9 @@ import { NeuralNetwork } from "./NeuralNetwork";
 import { CouncilCore } from "./CouncilCore";
 import { cn } from "../../lib/utils";
 import {
-  Brain,
-  Scale,
-  Shield,
-  Eye,
-  Lightbulb,
-  Sparkles,
+  Brain, Scale, Shield, Eye, Lightbulb, Sparkles,
 } from "lucide-react";
-import type {
-  AdvisorData,
-  AdvisorState,
-  NeuralConnection,
-  ConnectionState,
-  CouncilPhase,
-} from "./types";
+import type { AdvisorData, AdvisorState, NeuralConnection, ConnectionState } from "./types";
 
 const ADVISORS: AdvisorData[] = [
   { id: "sage", name: "Sage", role: "Wisdom & Ethics", color: "from-violet-500 to-purple-700", icon: Brain },
@@ -28,237 +17,199 @@ const ADVISORS: AdvisorData[] = [
   { id: "visionary", name: "Visionary", role: "Innovation", color: "from-cyan-500 to-blue-700", icon: Lightbulb },
 ];
 
-const IDLE_STATUSES = [
-  "Awaiting query...",
-  "Standing by...",
-  "Prepared...",
-  "Ready...",
+const IDLE_PHRASES = [
+  "Awaiting query", "Standing by", "Prepared", "Ready",
 ];
 
 const THINKING_PHRASES: Record<string, string[]> = {
-  sage: [
-    "Evaluating ethical principles...",
-    "Weighing moral implications...",
-    "Considering virtue framework...",
-    "Assessing wisdom alignment...",
-  ],
-  guardian: [
-    "Scanning for risks...",
-    "Assessing security threats...",
-    "Evaluating safeguards...",
-    "Checking stability...",
-  ],
-  strategist: [
-    "Projecting long-term impact...",
-    "Analyzing systemic effects...",
-    "Mapping future scenarios...",
-    "Calculating trajectories...",
-  ],
-  analyst: [
-    "Gathering evidence...",
-    "Cross-referencing sources...",
-    "Confidence increasing...",
-    "Quantifying uncertainty...",
-  ],
-  ethicist: [
-    "Checking fairness...",
-    "Evaluating rights impact...",
-    "Scanning for bias...",
-    "Assessing inclusivity...",
-  ],
-  visionary: [
-    "Generating alternatives...",
-    "Exploring possibilities...",
-    "Connecting insights...",
-    "Synthesizing perspectives...",
-  ],
+  sage: ["Evaluating ethics", "Weighing values", "Assessing wisdom", "Synthesizing"],
+  guardian: ["Scanning risks", "Assessing threats", "Evaluating safety", "Stability check"],
+  strategist: ["Projecting impact", "Analyzing systems", "Mapping scenarios", "Calculating"],
+  analyst: ["Gathering evidence", "Cross-referencing", "Confidence rising", "Scoring"],
+  ethicist: ["Checking fairness", "Rights impact", "Scanning bias", "Inclusivity"],
+  visionary: ["Exploring ideas", "Connecting dots", "Generating paths", "Synthesizing"],
 };
 
 const POSITIONS = {
-  sage: { x: 50, y: 10 },
-  guardian: { x: 18, y: 28 },
-  strategist: { x: 82, y: 28 },
-  core: { x: 50, y: 47 },
-  analyst: { x: 18, y: 66 },
-  ethicist: { x: 82, y: 66 },
+  sage: { x: 50, y: 8 },
+  guardian: { x: 16, y: 27 },
+  strategist: { x: 84, y: 27 },
+  core: { x: 50, y: 48 },
+  analyst: { x: 16, y: 67 },
+  ethicist: { x: 84, y: 67 },
   visionary: { x: 50, y: 85 },
 };
 
-const INITIAL_CONNECTIONS: NeuralConnection[] = [
-  { from: "sage", to: "guardian", state: "idle" },
-  { from: "sage", to: "strategist", state: "idle" },
-  { from: "guardian", to: "strategist", state: "idle" },
-  { from: "guardian", to: "analyst", state: "idle" },
-  { from: "strategist", to: "ethicist", state: "idle" },
-  { from: "analyst", to: "ethicist", state: "idle" },
-  { from: "analyst", to: "visionary", state: "idle" },
-  { from: "ethicist", to: "visionary", state: "idle" },
-  { from: "sage", to: "core", state: "idle" },
-  { from: "guardian", to: "core", state: "idle" },
-  { from: "strategist", to: "core", state: "idle" },
-  { from: "analyst", to: "core", state: "idle" },
-  { from: "ethicist", to: "core", state: "idle" },
-  { from: "visionary", to: "core", state: "idle" },
-  { from: "guardian", to: "ethicist", state: "idle" },
-  { from: "strategist", to: "analyst", state: "idle" },
+const BASE_CONNECTIONS: NeuralConnection[] = [
+  { from: "sage", to: "guardian", state: "idle" }, { from: "sage", to: "strategist", state: "idle" },
+  { from: "guardian", to: "strategist", state: "idle" }, { from: "guardian", to: "analyst", state: "idle" },
+  { from: "strategist", to: "ethicist", state: "idle" }, { from: "analyst", to: "ethicist", state: "idle" },
+  { from: "analyst", to: "visionary", state: "idle" }, { from: "ethicist", to: "visionary", state: "idle" },
+  { from: "sage", to: "core", state: "idle" }, { from: "guardian", to: "core", state: "idle" },
+  { from: "strategist", to: "core", state: "idle" }, { from: "analyst", to: "core", state: "idle" },
+  { from: "ethicist", to: "core", state: "idle" }, { from: "visionary", to: "core", state: "idle" },
+  { from: "guardian", to: "ethicist", state: "idle" }, { from: "strategist", to: "analyst", state: "idle" },
 ];
 
-function randomItem<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
+function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
+
+type Phase = "idle" | "deliberating" | "conflict" | "reflecting" | "consensus" | "verdict";
 
 interface CouncilChamberProps {
   className?: string;
   compact?: boolean;
-  phase?: CouncilPhase;
-  advisorStates?: AdvisorState[];
+  phase?: Phase;
   consensusLevel?: number;
-  verdict?: string;
-  onPhaseChange?: (phase: CouncilPhase) => void;
+  stepsComplete?: number;
+  stepsTotal?: number;
+  conflictsActive?: number;
+  confidence?: number;
+  wisdomScore?: number;
 }
 
 export function CouncilChamber({
-  className,
   compact = false,
   phase: externalPhase,
-  advisorStates: externalAdvisorStates,
-  consensusLevel: externalConsensus = 0,
-  verdict,
-  onPhaseChange,
+  consensusLevel: extConsensus = 0,
+  stepsComplete = 0,
+  stepsTotal = 9,
+  conflictsActive = 0,
+  confidence,
+  wisdomScore,
+  className,
 }: CouncilChamberProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerSize, setContainerSize] = useState({ width: 400, height: 500 });
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 400, height: 500 });
 
-  const [internalAdvisorStates, setInternalAdvisorStates] = useState<
-    AdvisorState[]
-  >(() =>
-    ADVISORS.map((a) => ({
-      id: a.id,
-      status: "idle",
-      statusLabel: randomItem(IDLE_STATUSES),
-      progress: 0,
-    }))
+  const [phase, setPhase] = useState<Phase>("idle");
+  const activePhase = externalPhase || phase;
+
+  const [advisorStates, setAdvisorStates] = useState<AdvisorState[]>(() =>
+    ADVISORS.map((a) => ({ id: a.id, status: "idle", statusLabel: pick(IDLE_PHRASES), progress: 0 }))
   );
 
-  const [connections, setConnections] =
-    useState<NeuralConnection[]>(INITIAL_CONNECTIONS);
-
-  const [internalPhase, setInternalPhase] = useState<CouncilPhase>("idle");
-  const phase = externalPhase || internalPhase;
-
-  const advisorStates = externalAdvisorStates || internalAdvisorStates;
+  const [connections, setConnections] = useState<NeuralConnection[]>(BASE_CONNECTIONS);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!ref.current) return;
     const obs = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        setContainerSize({ width, height });
-      }
+      for (const e of entries) setSize({ width: e.contentRect.width, height: e.contentRect.height });
     });
-    obs.observe(containerRef.current);
+    obs.observe(ref.current);
     return () => obs.disconnect();
   }, []);
 
-  const getAdvisorPosition = useCallback(
+  const getPos = useCallback(
     (id: string) => {
       const p = POSITIONS[id as keyof typeof POSITIONS];
-      if (!p) return { x: 0, y: 0 };
-      return {
-        x: (p.x / 100) * containerSize.width,
-        y: (p.y / 100) * containerSize.height,
-      };
+      return p ? { x: (p.x / 100) * size.width, y: (p.y / 100) * size.height } : { x: 0, y: 0 };
     },
-    [containerSize]
+    [size]
   );
 
-  const idleCycleRef = useRef<ReturnType<typeof setInterval>>();
-
+  // Idle animation cycle
   useEffect(() => {
-    if (phase !== "idle") {
-      if (idleCycleRef.current) clearInterval(idleCycleRef.current);
-      return;
-    }
-
-    idleCycleRef.current = setInterval(() => {
-      setInternalAdvisorStates((prev) =>
-        prev.map((s) => ({
-          ...s,
-          statusLabel:
-            Math.random() > 0.6
-              ? randomItem(IDLE_STATUSES)
-              : s.statusLabel,
-        }))
+    if (activePhase !== "idle") return;
+    const t = setInterval(() => {
+      setAdvisorStates((prev) =>
+        prev.map((s) => ({ ...s, statusLabel: Math.random() > 0.5 ? pick(IDLE_PHRASES) : s.statusLabel }))
       );
+      setConnections((prev) =>
+        prev.map((c) => {
+          if (Math.random() > 0.85) return { ...c, state: "active" as ConnectionState };
+          return { ...c, state: "idle" as ConnectionState };
+        })
+      );
+      setTimeout(() => setConnections((prev) => prev.map((c) => ({ ...c, state: "idle" as ConnectionState }))), 1500);
     }, 4000);
+    return () => clearInterval(t);
+  }, [activePhase]);
 
-    return () => {
-      if (idleCycleRef.current) clearInterval(idleCycleRef.current);
-    };
-  }, [phase]);
+  // Simulate deliberating connections
+  useEffect(() => {
+    if (activePhase === "idle" || activePhase === "verdict") return;
+    const t = setInterval(() => {
+      setConnections((prev) =>
+        prev.map((c) => {
+          const r = Math.random();
+          if (activePhase === "conflict") {
+            if ((c.from === "guardian" && c.to === "ethicist") || (c.from === "strategist" && c.to === "analyst"))
+              return { ...c, state: "conflict" as ConnectionState };
+            if (r > 0.6) return { ...c, state: "debating" as ConnectionState };
+          }
+          if (activePhase === "reflecting") {
+            if (r > 0.5) return { ...c, state: "reflection" as ConnectionState };
+          }
+          if (activePhase === "consensus") {
+            if (r > 0.4) return { ...c, state: "consensus" as ConnectionState };
+          }
+          if (r > 0.7) return { ...c, state: "active" as ConnectionState };
+          if (r > 0.85) return { ...c, state: "agree" as ConnectionState };
+          return { ...c, state: "active" as ConnectionState };
+        })
+      );
+    }, 3000);
+    return () => clearInterval(t);
+  }, [activePhase]);
 
-  const isIdle = phase === "idle";
-  const showAsThinking = phase !== "idle" && phase !== "verdict";
+  // Verdict connections
+  useEffect(() => {
+    if (activePhase !== "verdict") return;
+    setConnections((prev) => prev.map((c) => ({ ...c, state: "consensus" as ConnectionState })));
+  }, [activePhase]);
 
   return (
     <div
-      ref={containerRef}
+      ref={ref}
       className={cn(
         "relative w-full",
-        compact ? "aspect-[4/5] max-h-[400px]" : "aspect-[4/5] max-h-[600px]",
+        compact ? "aspect-[4/5] max-h-[380px]" : "aspect-[4/5] max-h-[560px]",
         className
       )}
     >
       <NeuralNetwork
         connections={connections}
         positions={Object.fromEntries(
-          [...ADVISORS.map((a) => a.id), "core"].map((id) => [
-            id,
-            getAdvisorPosition(id),
-          ])
+          [...ADVISORS.map((a) => a.id), "core"].map((id) => [id, getPos(id)])
         )}
-        width={containerSize.width}
-        height={containerSize.height}
+        width={size.width}
+        height={size.height}
+        phase={activePhase}
       />
 
-      {ADVISORS.map((advisor) => {
-        const pos = POSITIONS[advisor.id as keyof typeof POSITIONS];
-        const state = advisorStates.find((s) => s.id === advisor.id);
-        const isActive =
-          state?.status === "thinking" || state?.status === "conflict";
-
+      {ADVISORS.map((a) => {
+        const pos = POSITIONS[a.id as keyof typeof POSITIONS];
+        const st = advisorStates.find((s) => s.id === a.id);
         return (
           <AdvisorNode
-            key={advisor.id}
-            name={advisor.name}
-            role={advisor.role}
-            icon={advisor.icon}
-            color={advisor.color}
-            status={state?.status || "idle"}
-            statusLabel={state?.statusLabel || ""}
-            progress={state?.progress || 0}
-            isActive={isActive}
-            style={{
-              left: `${pos.x}%`,
-              top: `${pos.y}%`,
-              transform: "translate(-50%, -50%)",
-            }}
+            key={a.id}
+            name={a.name}
+            role={a.role}
+            icon={a.icon}
+            color={a.color}
+            status={st?.status || "idle"}
+            statusLabel={st?.statusLabel || ""}
+            progress={st?.progress || 0}
+            isActive={st?.status === "thinking" || st?.status === "conflict"}
+            score={st?.confidence != null ? Math.round(st.confidence * 100) : undefined}
+            scoreLabel={st?.stance}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: "translate(-50%, -50%)" }}
           />
         );
       })}
 
       <CouncilCore
-        phase={phase}
-        consensusLevel={externalConsensus}
-        verdict={verdict}
-        style={{
-          left: `${POSITIONS.core.x}%`,
-          top: `${POSITIONS.core.y}%`,
-          transform: "translate(-50%, -50%)",
-        }}
+        phase={activePhase}
+        stepsComplete={stepsComplete}
+        stepsTotal={stepsTotal}
+        consensusLevel={extConsensus}
+        conflictsActive={conflictsActive}
+        confidence={confidence}
+        wisdomScore={wisdomScore}
+        style={{ left: `${POSITIONS.core.x}%`, top: `${POSITIONS.core.y}%`, transform: "translate(-50%, -50%)" }}
       />
     </div>
   );
 }
 
-export { ADVISORS, THINKING_PHRASES, IDLE_STATUSES, POSITIONS };
+export { ADVISORS, THINKING_PHRASES, IDLE_PHRASES, POSITIONS };

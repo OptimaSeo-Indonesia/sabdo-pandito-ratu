@@ -3,74 +3,32 @@ import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { getDeliberationStatus, getDeliberationReport } from "../lib/api";
 import type { DeliberationStatus, FullReport } from "../types/api";
-import { cn } from "../lib/utils";
 import { Badge } from "../components/ui/badge";
 import { CouncilChamber } from "../components/council/CouncilChamber";
-import { CouncilCore } from "../components/council/CouncilCore";
 import { DeliberationTimeline } from "../components/deliberation/DeliberationTimeline";
 import { VerdictDashboard } from "../components/verdict/VerdictDashboard";
-import { ADVISORS, THINKING_PHRASES, IDLE_STATUSES } from "../components/council/CouncilChamber";
 import { AlertCircle, Loader2, Clock } from "lucide-react";
-import type { CouncilPhase, AdvisorState, NeuralConnection, ConnectionState } from "../components/council/types";
+import type { CouncilPhase } from "../components/council/types";
+import type { AdvisorState } from "../components/council/types";
 
-function randomItem<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
+const THINKING_PHRASES: Record<string, string[]> = {
+  sage: ["Evaluating ethics", "Weighing values", "Assessing wisdom", "Synthesizing"],
+  guardian: ["Scanning risks", "Assessing threats", "Evaluating safety", "Stability check"],
+  strategist: ["Projecting impact", "Analyzing systems", "Mapping scenarios", "Calculating"],
+  analyst: ["Gathering evidence", "Cross-referencing", "Confidence rising", "Scoring"],
+  ethicist: ["Checking fairness", "Rights impact", "Scanning bias", "Inclusivity"],
+  visionary: ["Exploring ideas", "Connecting dots", "Generating paths", "Synthesizing"],
+};
 
-const CONFLICT_TYPES = ["conflict", "disagree", "disagree", "consensus"];
+const ADVISOR_IDS = ["sage", "guardian", "strategist", "analyst", "ethicist", "visionary"];
 
-function simulateConnections(
-  step: number,
-  totalSteps: number,
-  hasConflict: boolean
-): NeuralConnection[] {
-  const baseConnections: NeuralConnection[] = [
-    { from: "sage", to: "guardian", state: "idle" },
-    { from: "sage", to: "strategist", state: "idle" },
-    { from: "guardian", to: "strategist", state: "idle" },
-    { from: "guardian", to: "analyst", state: "idle" },
-    { from: "strategist", to: "ethicist", state: "idle" },
-    { from: "analyst", to: "ethicist", state: "idle" },
-    { from: "analyst", to: "visionary", state: "idle" },
-    { from: "ethicist", to: "visionary", state: "idle" },
-    { from: "sage", to: "core", state: "idle" },
-    { from: "guardian", to: "core", state: "idle" },
-    { from: "strategist", to: "core", state: "idle" },
-    { from: "analyst", to: "core", state: "idle" },
-    { from: "ethicist", to: "core", state: "idle" },
-    { from: "visionary", to: "core", state: "idle" },
-    { from: "guardian", to: "ethicist", state: "idle" },
-    { from: "strategist", to: "analyst", state: "idle" },
-  ];
-
-  if (step <= 1) return baseConnections;
-
-  const ratio = step / totalSteps;
-
-  return baseConnections.map((c) => {
-    if (ratio < 0.3) {
-      if (Math.random() > 0.6) return { ...c, state: "active" as ConnectionState };
-    } else if (ratio < 0.5 && hasConflict) {
-      if (c.from === "guardian" && c.to === "ethicist") return { ...c, state: "conflict" as ConnectionState };
-      if (c.from === "strategist" && c.to === "analyst") return { ...c, state: "disagree" as ConnectionState };
-      if (Math.random() > 0.7) return { ...c, state: "active" as ConnectionState };
-    } else if (ratio < 0.8) {
-      if (c.from === "guardian" && c.to === "ethicist") return { ...c, state: "disagree" as ConnectionState };
-      if (c.from === "strategist" && c.to === "analyst") return { ...c, state: "disagree" as ConnectionState };
-      if (Math.random() > 0.5) return { ...c, state: "active" as ConnectionState };
-    } else {
-      return { ...c, state: "consensus" as ConnectionState };
-    }
-    return c;
-  });
-}
+function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
+function clamp(v: number, min = 0, max = 100) { return Math.max(min, Math.min(max, v)); }
 
 function LoadingSkeleton() {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+    <div className="mx-auto flex max-w-5xl items-center justify-center px-4 py-32 sm:px-6 lg:px-8">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
   );
 }
@@ -120,117 +78,25 @@ export default function Session() {
     }
 
     poll();
-    return () => {
-      cancelled = true;
-      clearTimeout(pollTimer);
-    };
+    return () => { cancelled = true; clearTimeout(pollTimer); };
   }, [id]);
 
   const councilPhase: CouncilPhase = useMemo(() => {
     if (isComplete) return "verdict";
     if (!status) return "idle";
     if (status.status === "failed") return "idle";
-
     const activeStep = status.progress.steps.find((s) => s.status === "in_progress");
     if (!activeStep) return "deliberating";
-
     if (["resolve_conflicts"].includes(activeStep.name)) return "conflict";
     if (["reflect"].includes(activeStep.name)) return "reflecting";
     if (["score_wisdom", "generate_verdict"].includes(activeStep.name)) return "consensus";
     return "deliberating";
   }, [status, isComplete]);
 
-  const advisorStates: AdvisorState[] = useMemo(() => {
-    const states: AdvisorState[] = ADVISORS.map((a) => ({
-      id: a.id,
-      status: "idle",
-      statusLabel: randomItem(IDLE_STATUSES),
-      progress: 0,
-    }));
-
-    if (isComplete && status && status.advisor_statuses.length > 0) {
-      return ADVISORS.map((a) => {
-        const apiState = status.advisor_statuses.find(
-          (as) => as.persona.replace(/\s+/g, "_").toLowerCase() === a.id
-        );
-        return {
-          id: a.id,
-          status: "done",
-          statusLabel: "Completed",
-          progress: 100,
-          stance: apiState?.stance,
-          confidence: apiState?.confidence,
-        };
-      });
-    }
-
-    if (isRunning && status) {
-      const activeStepIdx = status.progress.steps.findIndex(
-        (s) => s.status === "in_progress"
-      );
-      const ratio = activeStepIdx >= 0 ? activeStepIdx / status.progress.steps_total : 0.3;
-
-      return ADVISORS.map((a, i) => {
-        const baseProgress = Math.min(100, Math.round(ratio * 100 + (i * 5)));
-        const phrases = THINKING_PHRASES[a.id] || ["Analyzing..."];
-
-        let advisorStatus: string;
-        let advisorLabel: string;
-        let advisorProgress: number;
-
-        if (baseProgress >= 95) {
-          advisorStatus = "done";
-          advisorLabel = "Completed";
-          advisorProgress = 100;
-        } else if (baseProgress >= 70) {
-          advisorStatus = "thinking";
-          advisorLabel = phrases[3] || "Synthesizing...";
-          advisorProgress = baseProgress;
-        } else if (baseProgress >= 40) {
-          advisorStatus = "thinking";
-          advisorLabel = phrases[2] || "Evaluating...";
-          advisorProgress = baseProgress;
-        } else if (baseProgress >= 15) {
-          advisorStatus = "thinking";
-          advisorLabel = phrases[1] || "Analyzing...";
-          advisorProgress = baseProgress;
-        } else {
-          advisorStatus = "thinking";
-          advisorLabel = phrases[0] || "Thinking...";
-          advisorProgress = baseProgress;
-        }
-
-        return {
-          id: a.id,
-          status: advisorStatus,
-          statusLabel: advisorLabel,
-          progress: advisorProgress,
-        };
-      });
-    }
-
-    return states;
-  }, [status, isRunning, isComplete]);
-
-  const connections = useMemo(() => {
-    if (!status) return [];
-    const activeStepIdx = status.progress.steps.findIndex(
-      (s) => s.status === "in_progress"
-    );
-    const hasConflict = councilPhase === "conflict";
-    return simulateConnections(
-      Math.max(0, activeStepIdx),
-      status.progress.steps_total,
-      hasConflict
-    );
-  }, [status, councilPhase]);
-
   const consensusLevel = useMemo(() => {
     if (isComplete) return 100;
     if (!status) return 0;
-    const completed = status.progress.steps_completed;
-    const total = status.progress.steps_total;
-    return Math.round((completed / total) * 100);
+    return clamp(Math.round((status.progress.steps_completed / status.progress.steps_total) * 100));
   }, [status, isComplete]);
 
   if (error) return <ErrorState message={error} />;
@@ -238,6 +104,7 @@ export default function Session() {
 
   return (
     <div className="aurora-bg relative min-h-screen">
+      <div className="aurora-bg pointer-events-none fixed inset-0" />
       <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {status && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -256,11 +123,8 @@ export default function Session() {
                   <DeliberationTimeline steps={status.progress.steps} />
                 )}
 
-                {isComplete && report && (
-                  <VerdictDashboard
-                    verdict={status.verdict!}
-                    report={report}
-                  />
+                {isComplete && report && status.verdict && (
+                  <VerdictDashboard verdict={status.verdict} report={report} />
                 )}
 
                 {status.status === "failed" && (
@@ -292,9 +156,11 @@ export default function Session() {
                   <CouncilChamber
                     compact
                     phase={councilPhase}
-                    advisorStates={advisorStates}
                     consensusLevel={consensusLevel}
-                    verdict={status.verdict?.decision}
+                    stepsComplete={status.progress.steps_completed}
+                    stepsTotal={status.progress.steps_total}
+                    confidence={status.verdict?.confidence}
+                    wisdomScore={status.verdict?.wisdom_score ?? undefined}
                   />
                 </div>
 
@@ -308,8 +174,7 @@ export default function Session() {
                       <div>
                         <p className="text-sm font-medium">Council deliberating...</p>
                         <p className="text-xs text-muted-foreground">
-                          Step {status.progress.steps_completed + 1} of{" "}
-                          {status.progress.steps_total}
+                          Step {status.progress.steps_completed + 1} of {status.progress.steps_total}
                         </p>
                       </div>
                     </div>
@@ -317,9 +182,7 @@ export default function Session() {
                       <motion.div
                         className="h-full rounded-full bg-gradient-to-r from-primary to-primary-400"
                         initial={{ width: 0 }}
-                        animate={{
-                          width: `${(status.progress.steps_completed / status.progress.steps_total) * 100}%`,
-                        }}
+                        animate={{ width: `${consensusLevel}%` }}
                         transition={{ duration: 0.5 }}
                       />
                     </div>
@@ -333,10 +196,7 @@ export default function Session() {
                     </h3>
                     <div className="space-y-2">
                       {status.advisor_statuses.map((a) => (
-                        <div
-                          key={a.persona}
-                          className="flex items-center justify-between text-xs"
-                        >
+                        <div key={a.persona} className="flex items-center justify-between text-xs">
                           <span className="capitalize text-muted-foreground">
                             {a.persona.replace(/_/g, " ")}
                           </span>

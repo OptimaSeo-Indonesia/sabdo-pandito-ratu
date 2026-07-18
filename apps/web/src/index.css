@@ -76,9 +76,7 @@
     --ring: 239 84% 67%;
   }
 
-  html {
-    scroll-behavior: smooth;
-  }
+  html { scroll-behavior: smooth; }
 
   body {
     min-height: 100vh;
@@ -89,35 +87,15 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  * {
-    border-color: hsl(var(--border));
-  }
+  * { border-color: hsl(var(--border)); }
 
-  ::selection {
-    background-color: hsl(var(--primary) / 0.2);
-    color: hsl(var(--primary-700));
-  }
+  ::selection { background-color: hsl(var(--primary) / 0.2); color: hsl(var(--primary-700)); }
+  .dark ::selection { color: hsl(var(--primary-300)); }
 
-  .dark ::selection {
-    color: hsl(var(--primary-300));
-  }
-
-  ::-webkit-scrollbar {
-    width: 0.5rem;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    border-radius: 9999px;
-    background-color: hsl(var(--muted-foreground) / 0.2);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.3);
-  }
+  ::-webkit-scrollbar { width: 0.5rem; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { border-radius: 9999px; background-color: hsl(var(--muted-foreground) / 0.2); }
+  ::-webkit-scrollbar-thumb:hover { background-color: hsl(var(--muted-foreground) / 0.3); }
 }
 
 @layer components {
@@ -129,26 +107,24 @@
 
   .glass-card {
     border-radius: 1rem;
-    border: 1px solid hsl(var(--border) / 0.5);
+    border: 1px solid hsl(var(--border) / 0.4);
     background-color: hsl(var(--card) / 0.3);
     backdrop-filter: blur(24px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-    transition: all 0.3s ease;
+    transition: border-color 0.3s ease;
   }
 
   .dark .glass-card {
-    background-color: hsl(var(--card) / 0.4);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    background-color: hsl(var(--card) / 0.35);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   }
 
   :root .glass-card {
-    background-color: hsl(var(--card) / 0.7);
+    background-color: hsl(var(--card) / 0.65);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
   }
 
-  .glass-card:hover {
-    border-color: hsl(var(--primary) / 0.15);
-  }
+  .glass-card:hover { border-color: hsl(var(--primary) / 0.12); }
 
   .text-gradient {
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-400)), hsl(var(--primary-600)));
@@ -157,49 +133,10 @@
     background-clip: text;
   }
 
-  .aurora-bg {
-    background:
-      radial-gradient(ellipse 90% 60% at 50% -20%, rgba(99, 102, 241, 0.12), transparent),
-      radial-gradient(ellipse 70% 50% at 80% 30%, rgba(139, 92, 246, 0.08), transparent),
-      radial-gradient(ellipse 60% 40% at 20% 60%, rgba(52, 211, 153, 0.03), transparent),
-      radial-gradient(ellipse 50% 30% at 50% 80%, rgba(99, 102, 241, 0.04), transparent);
-  }
-
-  :root .aurora-bg {
-    background:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(99, 102, 241, 0.05), transparent),
-      radial-gradient(ellipse 60% 40% at 80% 30%, rgba(139, 92, 246, 0.03), transparent),
-      radial-gradient(ellipse 50% 30% at 20% 60%, rgba(52, 211, 153, 0.02), transparent);
-  }
-
   .shimmer {
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      hsl(var(--primary) / 0.08) 50%,
-      transparent 100%
-    );
+    background: linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.08) 50%, transparent 100%);
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
-  }
-
-  .neural-dot {
-    position: absolute;
-    width: 2px;
-    height: 2px;
-    border-radius: 50%;
-    background: hsl(var(--primary) / 0.3);
-    animation: neuralPulse 4s ease-in-out infinite;
-  }
-
-  .neural-dot:nth-child(2n) {
-    animation-delay: 1s;
-    background: hsl(var(--primary-400) / 0.2);
-  }
-
-  .neural-dot:nth-child(3n) {
-    animation-delay: 2s;
-    background: hsl(var(--accent-foreground) / 0.15);
   }
 }
 
@@ -208,7 +145,12 @@
   100% { background-position: 200% 0; }
 }
 
+@keyframes pulseSoft {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.05); }
+}
+
 @keyframes neuralPulse {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.5); }
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.8); }
 }
