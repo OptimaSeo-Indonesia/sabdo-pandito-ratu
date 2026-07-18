@@ -18,14 +18,14 @@ type ConnColor =
   | "reflection"
   | "consensus";
 
-const LINE_COLORS: Record<ConnColor, { main: string; glow: string; width: number }> = {
-  idle: { main: "rgba(99,102,241,0.06)", glow: "rgba(99,102,241,0)", width: 1 },
-  active: { main: "rgba(99,102,241,0.25)", glow: "rgba(99,102,241,0.08)", width: 1.5 },
-  agree: { main: "rgba(52,211,153,0.35)", glow: "rgba(52,211,153,0.15)", width: 1.5 },
-  debating: { main: "rgba(251,191,36,0.35)", glow: "rgba(251,191,36,0.15)", width: 1.5 },
-  conflict: { main: "rgba(251,113,133,0.45)", glow: "rgba(251,113,133,0.2)", width: 2 },
-  reflection: { main: "rgba(167,139,250,0.35)", glow: "rgba(167,139,250,0.15)", width: 1.5 },
-  consensus: { main: "rgba(99,102,241,0.2)", glow: "rgba(99,102,241,0.08)", width: 1 },
+const LINE_COLORS: Record<ConnColor, { main: string; glow: string; width: number; opacity: number }> = {
+  idle: { main: "#4F8CFF", glow: "#4F8CFF", width: 1, opacity: 0.05 },
+  active: { main: "#4F8CFF", glow: "#4F8CFF", width: 2, opacity: 0.3 },
+  agree: { main: "#34D399", glow: "#34D399", width: 2, opacity: 0.3 },
+  debating: { main: "#FBBF24", glow: "#FBBF24", width: 2, opacity: 0.3 },
+  conflict: { main: "#F87171", glow: "#F87171", width: 2, opacity: 0.4 },
+  reflection: { main: "#F8FAFC", glow: "#F8FAFC", width: 2, opacity: 0.3 },
+  consensus: { main: "#7C5CFF", glow: "#7C5CFF", width: 2, opacity: 0.3 },
 };
 
 const LABEL_OFFSETS: Record<string, { x: number; y: number }> = {
@@ -99,7 +99,8 @@ export function NeuralNetwork({
               x2={to.x}
               y2={to.y}
               stroke={colors.glow}
-              strokeWidth={colors.width + 4}
+              strokeWidth={colors.width + 6}
+              opacity={colors.opacity * 0.3}
               filter={`url(#ng-s-${uniqueId})`}
               className="transition-all duration-700"
             />
@@ -110,6 +111,7 @@ export function NeuralNetwork({
               y2={to.y}
               stroke={colors.main}
               strokeWidth={colors.width}
+              opacity={colors.opacity}
               strokeLinecap="round"
               filter={`url(#ng-${uniqueId})`}
               strokeDasharray={conn.state !== "idle" ? "4 6" : "none"}
@@ -123,8 +125,9 @@ export function NeuralNetwork({
             <circle
               cx={from.x}
               cy={from.y}
-              r={conn.state !== "idle" ? 2.5 : 1.5}
+              r={conn.state !== "idle" ? 3 : 2}
               fill={colors.main}
+              opacity={colors.opacity}
               filter={`url(#ng-${uniqueId})`}
               className="transition-all duration-500"
             />

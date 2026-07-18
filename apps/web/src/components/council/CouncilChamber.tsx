@@ -162,8 +162,8 @@ export function CouncilChamber({
     <div
       ref={ref}
       className={cn(
-        "relative w-full",
-        compact ? "aspect-[4/5] max-h-[380px]" : "aspect-[4/5] max-h-[560px]",
+        "relative mx-auto w-full max-w-[620px]",
+        compact ? "aspect-square max-h-[380px]" : "aspect-square",
         className
       )}
     >

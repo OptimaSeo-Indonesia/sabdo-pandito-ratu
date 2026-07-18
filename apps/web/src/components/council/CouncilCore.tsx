@@ -86,43 +86,41 @@ export function CouncilCore({
     >
       <div
         className={cn(
-          "relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br shadow-xl transition-all duration-1000 sm:h-16 sm:w-16",
-          cfg.accent,
-          cfg.glow,
-          isActive && "shadow-[0_0_40px_var(--tw-shadow-color)]",
-          isComplete && "shadow-[0_0_50px_var(--tw-shadow-color)]"
+          "relative flex h-36 w-36 items-center justify-center rounded-[20px] border border-white/10 bg-white/[0.05] backdrop-blur-[18px] shadow-xl transition-all duration-1000 sm:h-40 sm:w-40",
+          isActive && "shadow-[0_0_40px_rgba(79,140,255,0.15)]",
+          isComplete && "shadow-[0_0_50px_rgba(52,211,153,0.15)]"
         )}
       >
         {isActive && (
-          <span className="absolute inset-0 animate-ping rounded-full bg-white/15" />
+          <span className="absolute inset-0 animate-ping rounded-[20px] bg-white/15" />
         )}
         {isComplete && (
           <>
-            <span className="absolute inset-0 animate-ping rounded-full bg-white/10" />
+            <span className="absolute inset-0 animate-ping rounded-[20px] bg-white/10" />
             <span
-              className="absolute inset-2 rounded-full bg-white/20 blur-sm"
+              className="absolute inset-2 rounded-[20px] bg-white/20 blur-sm"
               style={{ animation: "pulseSoft 2s ease-in-out infinite" }}
             />
           </>
         )}
         {isIdle && (
           <span
-            className="absolute inset-1 rounded-full bg-white/10 blur-[2px]"
+            className="absolute inset-1 rounded-[20px] bg-white/10 blur-[2px]"
             style={{ animation: "pulseSoft 3s ease-in-out infinite" }}
           />
         )}
         <div className="relative z-10 text-center">
           {isComplete ? (
-            <svg className="mx-auto h-5 w-5 text-white sm:h-6 sm:w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="mx-auto h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           ) : isActive ? (
-            <svg className="mx-auto h-5 w-5 animate-spin text-white sm:h-6 sm:w-6" viewBox="0 0 24 24" fill="none">
+            <svg className="mx-auto h-8 w-8 animate-spin text-white" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           ) : (
-            <svg className="mx-auto h-5 w-5 text-white/90 sm:h-6 sm:w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="mx-auto h-8 w-8 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2a10 10 0 1010 10M12 2v4M12 2l3 3M12 6l-3-3" />
             </svg>
           )}
