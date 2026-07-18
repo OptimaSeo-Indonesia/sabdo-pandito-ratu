@@ -16,7 +16,7 @@ import {
   BrainCircuit,
 } from "lucide-react";
 
-const cardStyle = "bg-card border border-[rgba(108,99,255,0.22)] shadow-[0_8px_32px_rgba(0,0,0,0.35)]";
+const cardStyle = "bg-card card-ref";
 
 function StatsCard({
   icon: Icon,

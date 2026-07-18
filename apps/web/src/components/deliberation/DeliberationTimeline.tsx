@@ -71,11 +71,9 @@ export function DeliberationTimeline({ steps, className }: DeliberationTimelineP
                 <div
                   className={cn(
                     "w-[2px] h-3",
-                    isInProgress
+                    isInProgress || isCompleted
                       ? "bg-[linear-gradient(180deg,rgba(108,99,255,0.7)_0%,rgba(108,99,255,0.3)_100%)]"
-                      : isCompleted
-                        ? "bg-[rgba(108,99,255,0.5)]"
-                        : "border-l-2 border-dashed border-[rgba(255,255,255,0.12)]"
+                      : "border-l-2 border-dashed border-[rgba(255,255,255,0.12)]"
                   )}
                 />
               </div>

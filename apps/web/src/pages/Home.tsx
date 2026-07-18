@@ -24,11 +24,11 @@ const EXAMPLE_PROMPTS = [
 
 const ADVISOR_STATUSES = [
   { id: "sage", name: "Sage", desc: "Evaluating principles...", pct: 78, iconColor: "text-primary", barGradient: "bg-grad-sage", bgClass: "bg-primary/10 border-primary/30" },
-  { id: "strategist", name: "Strategist", desc: "Mapping implications...", pct: 62, iconColor: "text-[#3D9BFF]", barGradient: "bg-grad-strategist", bgClass: "bg-[#3D9BFF]/10 border-[#3D9BFF]/30" },
+  { id: "strategist", name: "Strategist", desc: "Mapping implications...", pct: 62, iconColor: "text-[#4A9EFF]", barGradient: "bg-grad-strategist", bgClass: "bg-[#3D6BFF]/10 border-[#4A9EFF]/30" },
   { id: "guardian", name: "Guardian", desc: "Scanning risks...", pct: 91, iconColor: "text-accent", barGradient: "bg-grad-guardian", bgClass: "bg-accent/10 border-accent/30" },
   { id: "analyst", name: "Analyst", desc: "Analyzing evidence...", pct: 85, iconColor: "text-[#00C896]", barGradient: "bg-grad-analyst", bgClass: "bg-[#00C896]/10 border-[#00C896]/30" },
-  { id: "visionary", name: "Visionary", desc: "Exploring alternatives...", pct: 70, iconColor: "text-[#5B8FFF]", barGradient: "bg-grad-visionary", bgClass: "bg-[#5B8FFF]/10 border-[#5B8FFF]/30" },
-  { id: "ethicist", name: "Ethicist", desc: "Checking fairness...", pct: 66, iconColor: "text-[#FF4FA3]", barGradient: "bg-grad-ethicist", bgClass: "bg-[#FF4FA3]/10 border-[#FF4FA3]/30" },
+  { id: "visionary", name: "Visionary", desc: "Exploring alternatives...", pct: 70, iconColor: "text-[#4A9EFF]", barGradient: "bg-grad-visionary", bgClass: "bg-[#3D6BFF]/10 border-[#4A9EFF]/30" },
+  { id: "ethicist", name: "Ethicist", desc: "Checking fairness...", pct: 66, iconColor: "text-[#FF58B8]", barGradient: "bg-grad-ethicist", bgClass: "bg-[#FF4FA3]/10 border-[#FF58B8]/30" },
 ];
 
 const DELIBERATION_STEPS = [
@@ -71,7 +71,7 @@ export default function Home() {
       {/* Header Row */}
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-[56px] font-bold leading-[1.05] tracking-tight">
+          <h1 className="text-5xl font-bold leading-[1.05] tracking-tight">
             Sabdo{" "}
             <span className="text-gradient-brand">Pandito Ratu</span>
           </h1>
@@ -93,7 +93,7 @@ export default function Home() {
             </button>
           </div>
           <div className="flex items-center gap-2 bg-button-secondary rounded-[10px] px-3 py-1.5">
-            <div className="h-6 w-6 rounded-full bg-gradient-primary-btn flex items-center justify-center text-[10px] font-bold text-white">
+            <div className="h-6 w-6 rounded-full bg-grad-primary-btn flex items-center justify-center text-[10px] font-bold text-white">
               PU
             </div>
             <div>
@@ -115,14 +115,7 @@ export default function Home() {
           <CouncilChamber />
 
           {/* Question Input */}
-          <section
-            className="w-full rounded-2xl p-4"
-            style={{
-              backgroundColor: "#070D22",
-              border: "1px solid rgba(108, 99, 255, 0.22)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.35)",
-            }}
-          >
+          <section className="w-full rounded-2xl p-4 card-ref" style={{ backgroundColor: "#070D22" }}>
             <h2 className="text-base font-semibold text-foreground mb-4">
               Submit a Question to the Council
             </h2>
@@ -174,7 +167,7 @@ export default function Home() {
                     style={{ backgroundColor: "#111633", border: "1px solid rgba(255,255,255,0.08)" }}
                   >
                     <Lightbulb className="h-3.5 w-3.5" />
-                    Suggestions
+                    Suggested Prompts
                   </button>
                 </div>
 
@@ -229,13 +222,7 @@ export default function Home() {
         {/* Right Column - 380px */}
         <div className="flex w-[380px] shrink-0 flex-col gap-6 overflow-auto">
           {/* Deliberation Progress */}
-          <section
-            className="bg-card rounded-2xl p-4 flex flex-col gap-0"
-            style={{
-              border: "1px solid rgba(108, 99, 255, 0.22)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.35)",
-            }}
-          >
+          <section className="bg-card card-ref rounded-2xl p-4 flex flex-col gap-0">
             <div className="flex items-center justify-between mb-3">
               <span className="text-base font-semibold text-foreground">
                 Deliberation Progress
@@ -253,13 +240,7 @@ export default function Home() {
           </section>
 
           {/* Council Status */}
-          <section
-            className="bg-card rounded-[18px] p-4"
-            style={{
-              border: "1px solid rgba(108, 99, 255, 0.22)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.35)",
-            }}
-          >
+          <section className="bg-card card-ref rounded-[18px] p-4">
             <h2 className="text-base font-semibold text-foreground mb-4">
               Council Status
             </h2>
@@ -275,7 +256,7 @@ export default function Home() {
                       <p className="text-xs font-semibold text-foreground leading-tight">{a.name}</p>
                       <p className="text-[10px] text-muted leading-tight truncate">{a.desc}</p>
                       <div className="mt-1 flex items-center gap-1.5">
-                        <div className="flex-1 h-[3px] rounded-full bg-status-track overflow-hidden">
+                        <div className="flex-1 h-[3px] rounded-full bg-progress-track overflow-hidden">
                           <div className={`h-full rounded-full ${a.barGradient}`} style={{ width: `${a.pct}%` }} />
                         </div>
                         <span className="text-[10px] text-muted font-medium shrink-0">{a.pct}%</span>

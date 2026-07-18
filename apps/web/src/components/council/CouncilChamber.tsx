@@ -7,12 +7,12 @@ import {
 import type { AdvisorData } from "./types";
 
 const ADVISORS: AdvisorData[] = [
-  { id: "sage", name: "Sage", role: "Wisdom & Ethics", color: "#A855F7", icon: Brain },
-  { id: "guardian", name: "Guardian", role: "Risk & Security", color: "#F59E0B", icon: Shield },
+  { id: "sage", name: "Sage", role: "Wisdom & Ethics", color: "#814AFF", icon: Brain },
+  { id: "guardian", name: "Guardian", role: "Risk & Security", color: "#E8A32E", icon: Shield },
   { id: "strategist", name: "Strategist", role: "Long-term Planning", color: "#3B82F6", icon: Eye },
-  { id: "analyst", name: "Analyst", role: "Evidence & Logic", color: "#10B981", icon: Scale },
-  { id: "ethicist", name: "Ethicist", role: "Fairness & Rights", color: "#EC4899", icon: Sparkles },
-  { id: "visionary", name: "Visionary", role: "Innovation", color: "#3B82F6", icon: Lightbulb },
+  { id: "analyst", name: "Analyst", role: "Evidence & Logic", color: "#00C896", icon: Scale },
+  { id: "ethicist", name: "Ethicist", role: "Fairness & Rights", color: "#FF58B8", icon: Sparkles },
+  { id: "visionary", name: "Visionary", role: "Innovation", color: "#4A9EFF", icon: Lightbulb },
 ];
 
 const POSITIONS: Record<string, { top: string; left: string }> = {
@@ -65,7 +65,7 @@ export function CouncilChamber({ className }: CouncilChamberProps) {
         src="https://c.animaapp.com/mrqrcjormMWdDO/img/background-gunungan-illustration.png"
         alt=""
         className="pointer-events-none absolute opacity-60"
-        style={{ top: "7.4%", left: "-10.7%", width: "32.2%", aspectRatio: "277/553", zIndex: 0 }}
+        style={{ top: "5%", left: "-35%", width: "163%", aspectRatio: "445/604", zIndex: 0 }}
       />
 
       {/* SVG Connection Lines */}
@@ -138,7 +138,7 @@ export function CouncilChamber({ className }: CouncilChamberProps) {
         <CouncilCore
           style={{
             position: "absolute",
-            top: "37%",
+            top: "22.6%",
             left: "50%",
             transform: "translate(-50%, -50%)",
             zIndex: 20,

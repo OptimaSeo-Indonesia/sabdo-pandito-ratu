@@ -36,7 +36,7 @@ function LoadingSkeleton() {
 function ErrorState({ message }: { message: string }) {
   return (
     <div className="mx-auto max-w-lg py-20">
-      <div className="bg-card border border-[rgba(108,99,255,0.22)] shadow-[0_8px_32px_rgba(0,0,0,0.35)] rounded-2xl p-8 text-center">
+      <div className="bg-card card-ref rounded-2xl p-8 text-center">
         <AlertCircle className="mx-auto mb-4 h-12 w-12 text-danger" />
         <h2 className="mb-2 text-lg font-semibold">Deliberation Error</h2>
         <p className="text-sm text-muted">{message}</p>
@@ -111,7 +111,7 @@ export default function Session() {
   if (error) return <ErrorState message={error} />;
   if (!status && !error) return <LoadingSkeleton />;
 
-  const cardStyle = "bg-card border border-[rgba(108,99,255,0.22)] shadow-[0_8px_32px_rgba(0,0,0,0.35)]";
+  const cardStyle = "bg-card card-ref";
 
   return (
     <div className="flex flex-col gap-6 overflow-auto">
@@ -190,7 +190,7 @@ export default function Session() {
                       </p>
                     </div>
                   </div>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-status-track">
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-progress-track">
                     <motion.div
                       className="h-full rounded-full bg-grad-primary-btn"
                       initial={{ width: 0 }}

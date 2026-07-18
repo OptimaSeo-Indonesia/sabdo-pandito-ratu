@@ -31,7 +31,7 @@ export function AdvisorNode({ advisor, style }: AdvisorNodeProps) {
             boxShadow: `0 0 20px ${glow(color)}, 0 0 40px ${glow(color)}`,
           }}
         >
-          <Icon size={32} strokeWidth={1.5} color={color} />
+          <Icon size={32} strokeWidth={2} color={color} />
         </div>
         <span className="text-foreground font-semibold text-sm text-center leading-tight">
           {advisor.name}
