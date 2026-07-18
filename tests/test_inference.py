@@ -169,6 +169,7 @@ def test_selector_match_score():
 
 def test_selector_structured_output_required():
     registry = InferenceRegistry()
+    registry._adapters.clear()
 
     class NoStructAdapter(FakeAdapter):
         def __init__(self, adapter_id: str = "no-struct"):

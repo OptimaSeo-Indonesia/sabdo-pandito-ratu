@@ -110,8 +110,18 @@ class DeliberationGraph:
 
     def _track_step(self, state: DeliberationState, name: str) -> dict:
         now = datetime.now(timezone.utc)
-        step = DeliberationStep(name=name, status="completed", started_at=now, completed_at=now)
-        steps = list(state.steps) + [step]
+        steps = list(state.steps)
+        found = False
+        for s in steps:
+            if s.name == name:
+                s.status = "completed"
+                s.started_at = s.started_at or now
+                s.completed_at = now
+                found = True
+                break
+        if not found:
+            step = DeliberationStep(name=name, status="completed", started_at=now, completed_at=now)
+            steps.append(step)
         completed = len([s for s in steps if s.status == "completed"])
         return {
             "steps": [s.model_dump() for s in steps],

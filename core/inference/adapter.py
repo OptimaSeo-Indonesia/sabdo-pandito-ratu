@@ -5,11 +5,15 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, version 3.
 
+import os
 from abc import ABC, abstractmethod
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 from core.models import Argument, Perspective
+
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
 
 class VerifiedCapability(BaseModel):
