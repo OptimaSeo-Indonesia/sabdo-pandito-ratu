@@ -1,11 +1,8 @@
-import type { LucideIcon } from "lucide-react";
-
 export interface AdvisorData {
   id: string;
   name: string;
   role: string;
   color: string;
-  icon: LucideIcon;
 }
 
 export interface AdvisorState {

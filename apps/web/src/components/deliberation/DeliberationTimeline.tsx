@@ -15,7 +15,7 @@ function StatusIcon({ status }: { status: Step["status"] }) {
   if (status === "completed") {
     return (
       <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none">
-        <circle cx="8" cy="8" r="7" fill="rgba(108,99,255,0.15)" stroke="rgba(108,99,255,0.5)" strokeWidth="0.5" />
+        <circle cx="8" cy="8" r="7" fill="rgba(108,99,255,0.15)" stroke="rgba(108,99,255,0.55)" strokeWidth="0.5" />
         <path d="M5 8.5L7 10.5L11 6" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
@@ -23,7 +23,7 @@ function StatusIcon({ status }: { status: Step["status"] }) {
   if (status === "in_progress") {
     return (
       <div className="relative flex h-4 w-4 items-center justify-center">
-        <div className="h-4 w-4 rounded-full border-2 border-primary shadow-[0_0_12px_rgba(108,99,255,0.6)]" />
+        <div className="h-4 w-4 rounded-full border-2 border-primary shadow-[0_0_12px_rgba(108,99,255,0.5)]" />
         <div className="absolute h-1.5 w-1.5 rounded-full bg-primary" />
       </div>
     );

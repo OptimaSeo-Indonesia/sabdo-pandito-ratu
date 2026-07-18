@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import { AdvisorIcon } from "./icons";
 import type { AdvisorData } from "./types";
 
 interface AdvisorNodeProps {
@@ -7,15 +7,10 @@ interface AdvisorNodeProps {
 }
 
 function alpha(c: string): string {
-  return c + "80"; // 50% opacity hex
-}
-
-function glow(c: string): string {
-  return c + "4D"; // 30% opacity hex
+  return c + "8C";
 }
 
 export function AdvisorNode({ advisor, style }: AdvisorNodeProps) {
-  const Icon = advisor.icon;
   const color = advisor.color;
 
   return (
@@ -27,11 +22,10 @@ export function AdvisorNode({ advisor, style }: AdvisorNodeProps) {
             width: "72px",
             height: "72px",
             border: `2px solid ${alpha(color)}`,
-            background: `radial-gradient(circle at 40% 35%, ${glow(color)} 0%, rgba(3,7,22,0.9) 70%)`,
-            boxShadow: `0 0 20px ${glow(color)}, 0 0 40px ${glow(color)}`,
+            background: `radial-gradient(circle at 40% 35%, ${alpha(color)} 0%, rgba(3,7,22,0.9) 70%)`,
           }}
         >
-          <Icon size={32} strokeWidth={2} color={color} />
+          <AdvisorIcon id={advisor.id} size={32} color={color} />
         </div>
         <span className="text-foreground font-semibold text-sm text-center leading-tight">
           {advisor.name}
@@ -40,8 +34,8 @@ export function AdvisorNode({ advisor, style }: AdvisorNodeProps) {
           {advisor.role}
         </span>
         <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-[#22C55E] shadow-[0_0_6px_#22C55E]" />
-          <span className="text-[11px] text-green-400">Ready</span>
+          <span className="w-2 h-2 rounded-full bg-green-400" />
+          <span className="text-[11px] text-[#22c55e]">Ready</span>
         </div>
       </div>
     </div>

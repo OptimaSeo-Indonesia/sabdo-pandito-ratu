@@ -17,7 +17,7 @@ export function CouncilCore({ style }: CouncilCoreProps) {
           }}
         >
           <img
-            src="https://c.animaapp.com/mrqrcjormMWdDO/img/council-core-emblem.png"
+            src="/img/council-core-emblem.png"
             alt="Council Core emblem"
             className="w-12 h-12 object-contain mb-1"
           />

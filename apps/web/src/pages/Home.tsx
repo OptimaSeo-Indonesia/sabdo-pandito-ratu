@@ -4,15 +4,16 @@ import { startDeliberation, startDryRun } from "../lib/api";
 import { cn } from "../lib/utils";
 import { CouncilChamber } from "../components/council/CouncilChamber";
 import { DeliberationTimeline } from "../components/deliberation/DeliberationTimeline";
+import { AdvisorIcon } from "../components/council/icons";
+import { ThemeToggle } from "../components/ThemeProvider";
 import {
   Send,
   Upload,
   Mic,
-  Sparkles,
+  Lightbulb,
   LayoutGrid,
   List,
   Loader2,
-  Lightbulb,
 } from "lucide-react";
 
 const EXAMPLE_PROMPTS = [
@@ -23,12 +24,12 @@ const EXAMPLE_PROMPTS = [
 ];
 
 const ADVISOR_STATUSES = [
-  { id: "sage", name: "Sage", desc: "Evaluating principles...", pct: 78, iconColor: "text-primary", barGradient: "bg-grad-sage", bgClass: "bg-primary/10 border-primary/30" },
-  { id: "strategist", name: "Strategist", desc: "Mapping implications...", pct: 62, iconColor: "text-[#4A9EFF]", barGradient: "bg-grad-strategist", bgClass: "bg-[#3D6BFF]/10 border-[#4A9EFF]/30" },
-  { id: "guardian", name: "Guardian", desc: "Scanning risks...", pct: 91, iconColor: "text-accent", barGradient: "bg-grad-guardian", bgClass: "bg-accent/10 border-accent/30" },
-  { id: "analyst", name: "Analyst", desc: "Analyzing evidence...", pct: 85, iconColor: "text-[#00C896]", barGradient: "bg-grad-analyst", bgClass: "bg-[#00C896]/10 border-[#00C896]/30" },
-  { id: "visionary", name: "Visionary", desc: "Exploring alternatives...", pct: 70, iconColor: "text-[#4A9EFF]", barGradient: "bg-grad-visionary", bgClass: "bg-[#3D6BFF]/10 border-[#4A9EFF]/30" },
-  { id: "ethicist", name: "Ethicist", desc: "Checking fairness...", pct: 66, iconColor: "text-[#FF58B8]", barGradient: "bg-grad-ethicist", bgClass: "bg-[#FF4FA3]/10 border-[#FF58B8]/30" },
+  { id: "sage", name: "Sage", desc: "Evaluating principles...", pct: 78, iconColor: "text-primary", barGradient: "bg-grad-sage", bgClass: "bg-primary/[0.12] border-[rgba(108,99,255,0.55)]" },
+  { id: "strategist", name: "Strategist", desc: "Mapping implications...", pct: 62, iconColor: "text-[#4A9EFF]", barGradient: "bg-grad-strategist", bgClass: "bg-[rgba(74,158,255,0.12)] border-[rgba(74,158,255,0.55)]" },
+  { id: "guardian", name: "Guardian", desc: "Scanning risks...", pct: 91, iconColor: "text-accent", barGradient: "bg-grad-guardian", bgClass: "bg-accent/[0.12] border-[rgba(244,181,71,0.55)]" },
+  { id: "analyst", name: "Analyst", desc: "Analyzing evidence...", pct: 85, iconColor: "text-[#00C896]", barGradient: "bg-grad-analyst", bgClass: "bg-[rgba(0,200,150,0.12)] border-[rgba(0,200,150,0.55)]" },
+  { id: "visionary", name: "Visionary", desc: "Exploring alternatives...", pct: 70, iconColor: "text-[#4A9EFF]", barGradient: "bg-grad-visionary", bgClass: "bg-[rgba(74,158,255,0.12)] border-[rgba(74,158,255,0.55)]" },
+  { id: "ethicist", name: "Ethicist", desc: "Checking fairness...", pct: 66, iconColor: "text-[#FF58B8]", barGradient: "bg-grad-ethicist", bgClass: "bg-[rgba(255,88,184,0.12)] border-[rgba(255,88,184,0.55)]" },
 ];
 
 const DELIBERATION_STEPS = [
@@ -68,65 +69,61 @@ export default function Home() {
 
   return (
     <>
-      {/* Header Row */}
-      <div className="flex items-start justify-between">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-5xl font-bold leading-[1.05] tracking-tight">
-            Sabdo{" "}
-            <span className="text-gradient-brand">Pandito Ratu</span>
-          </h1>
-          <p className="text-accent font-semibold text-xl">
-            Multi-AI Deliberation Engine
-          </p>
-          <p className="text-muted text-sm leading-6 max-w-[320px]">
-            Multiple AI advisors analyze, debate, reflect, and produce transparent decisions.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center rounded-[10px] bg-button-secondary p-1 gap-0">
-            <button className="flex items-center justify-center h-8 w-8 rounded-md bg-background text-foreground">
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button className="flex items-center justify-center h-8 w-8 rounded-md text-muted hover:text-foreground">
-              <List className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="flex items-center gap-2 bg-button-secondary rounded-[10px] px-3 py-1.5">
-            <div className="h-6 w-6 rounded-full bg-grad-primary-btn flex items-center justify-center text-[10px] font-bold text-white">
-              PU
-            </div>
-            <div>
-              <p className="text-xs font-medium text-foreground leading-tight">Pandita Utama</p>
-              <p className="text-[10px] text-muted leading-tight">Admin</p>
-            </div>
-            <span className="ml-1 text-[9px] font-bold uppercase text-white bg-grad-primary-btn rounded-md px-1.5 py-0.5 leading-normal">
-              Pro
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Grid */}
+      {/* 3-Column Layout */}
       <div className="flex flex-1 gap-6 overflow-hidden" style={{ minHeight: 0 }}>
-        {/* Left Column */}
+        {/* Column 2: Council + Chat */}
         <div className="flex flex-1 flex-col gap-6 overflow-auto">
+          {/* Header Hero */}
+          <div className="flex items-start justify-between shrink-0">
+            <div className="flex flex-col gap-2">
+              <h1 className="text-5xl font-bold leading-[1.05] tracking-tight">
+                Sabdo{" "}
+                <span className="text-gradient-brand">Pandito Ratu</span>
+              </h1>
+              <p className="text-accent font-semibold text-xl">
+                Multi-AI Deliberation Engine
+              </p>
+              <p className="text-muted text-sm leading-6 max-w-[320px]">
+                Multiple AI advisors analyze, debate, reflect, and produce transparent decisions.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center rounded-[10px] bg-button-secondary p-1 gap-0">
+                <button className="flex items-center justify-center h-8 w-8 rounded-md bg-background text-foreground">
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button className="flex items-center justify-center h-8 w-8 rounded-md text-muted hover:text-foreground">
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
+              <ThemeToggle />
+              <div className="flex items-center gap-2 bg-topbar-chip rounded-[10px] px-3 py-1.5">
+                <div className="h-6 w-6 rounded-full bg-grad-primary-btn flex items-center justify-center text-[10px] font-bold text-white">
+                  PU
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-foreground leading-tight">Pandita Utama</p>
+                  <p className="text-[10px] text-muted leading-tight">Admin</p>
+                </div>
+                <span className="ml-1 text-[9px] font-bold uppercase text-white bg-grad-primary-btn rounded-md px-1.5 py-0.5 leading-normal">
+                  Pro
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Council Diagram */}
           <CouncilChamber />
 
           {/* Question Input */}
-          <section className="w-full rounded-2xl p-4 card-ref" style={{ backgroundColor: "#070D22" }}>
+          <section className="w-full rounded-2xl p-4 card-ref bg-panel">
             <h2 className="text-base font-semibold text-foreground mb-4">
               Submit a Question to the Council
             </h2>
             <form onSubmit={handleSubmit}>
               <div
-                className="rounded-[10px] mb-3"
-                style={{
-                  backgroundColor: "#050A1B",
-                  border: "1px solid rgba(108, 99, 255, 0.16)",
-                  position: "relative",
-                }}
+                className="rounded-[10px] mb-3 bg-input-bg border border-[rgba(108,99,255,0.18)]"
+                style={{ position: "relative" }}
               >
                 <textarea
                   ref={inputRef}
@@ -219,7 +216,7 @@ export default function Home() {
           </section>
         </div>
 
-        {/* Right Column - 380px */}
+        {/* Column 3: Status Panel - 380px */}
         <div className="flex w-[380px] shrink-0 flex-col gap-6 overflow-auto">
           {/* Deliberation Progress */}
           <section className="bg-card card-ref rounded-2xl p-4 flex flex-col gap-0">
@@ -246,11 +243,10 @@ export default function Home() {
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {ADVISOR_STATUSES.map((a) => {
-                const Icon = a.id === "sage" ? Sparkles : a.id === "strategist" ? Lightbulb : a.id === "guardian" ? Upload : a.id === "analyst" ? Send : a.id === "visionary" ? Sparkles : Upload;
                 return (
                   <div key={a.id} className="flex items-start gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${a.bgClass}`}>
-                      <Icon className={`h-4 w-4 ${a.iconColor}`} />
+                      <AdvisorIcon id={a.id} size={18} className={a.iconColor} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-foreground leading-tight">{a.name}</p>
@@ -267,6 +263,7 @@ export default function Home() {
               })}
             </div>
           </section>
+
         </div>
       </div>
     </>

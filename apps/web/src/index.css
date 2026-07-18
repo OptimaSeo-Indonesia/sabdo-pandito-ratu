@@ -4,6 +4,41 @@
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 229 62% 5%;
+    --primary: 243 100% 69%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 38 89% 62%;
+    --accent-foreground: 0 0% 100%;
+    --success: 154 80% 39%;
+    --warning: 37 90% 46%;
+    --danger: 333 100% 59%;
+    --info: 198 100% 43%;
+    --muted: 229 20% 46%;
+    --muted-foreground: 229 20% 46%;
+    --sidebar: 0 0% 96%;
+    --panel: 0 0% 98%;
+    --card: 0 0% 99%;
+    --elevated-card: 0 0% 95%;
+    --input-bg: 0 0% 93%;
+    --button-secondary: 229 20% 92%;
+    --active-nav: 243 50% 94%;
+    --progress-track: 229 20% 88%;
+    --topbar-chip: 0 0% 94%;
+    --cat-sage: 266 100% 68%;
+    --cat-strategist: 208 100% 55%;
+    --cat-ethicist: 333 100% 69%;
+    --cat-visionary: 210 100% 56%;
+    --cat-analyst: 171 83% 48%;
+    --cat-guardian: 37 90% 56%;
+    --border: 229 62% 5%;
+    --input: 229 62% 5%;
+    --ring: 243 100% 69%;
+    --radius: 16px;
+    --font-body: "Inter", system-ui, sans-serif;
+  }
+
+  .dark {
     --background: 229 62% 5%;
     --foreground: 228 100% 98%;
     --primary: 243 100% 69%;

@@ -1,18 +1,15 @@
 import { AdvisorNode } from "./AdvisorNode";
 import { CouncilCore } from "./CouncilCore";
 import { cn } from "../../lib/utils";
-import {
-  Brain, Scale, Shield, Eye, Lightbulb, Sparkles,
-} from "lucide-react";
 import type { AdvisorData } from "./types";
 
 const ADVISORS: AdvisorData[] = [
-  { id: "sage", name: "Sage", role: "Wisdom & Ethics", color: "#814AFF", icon: Brain },
-  { id: "guardian", name: "Guardian", role: "Risk & Security", color: "#E8A32E", icon: Shield },
-  { id: "strategist", name: "Strategist", role: "Long-term Planning", color: "#3B82F6", icon: Eye },
-  { id: "analyst", name: "Analyst", role: "Evidence & Logic", color: "#00C896", icon: Scale },
-  { id: "ethicist", name: "Ethicist", role: "Fairness & Rights", color: "#FF58B8", icon: Sparkles },
-  { id: "visionary", name: "Visionary", role: "Innovation", color: "#4A9EFF", icon: Lightbulb },
+  { id: "sage", name: "Sage", role: "Ethics & Wisdom", color: "#6C63FF" },
+  { id: "guardian", name: "Guardian", role: "Risk & Security", color: "#F4B547" },
+  { id: "strategist", name: "Strategist", role: "Long-term Thinking", color: "#4A9EFF" },
+  { id: "analyst", name: "Analyst", role: "Evidence & Logic", color: "#00C896" },
+  { id: "ethicist", name: "Ethicist", role: "Fairness & Impact", color: "#FF58B8" },
+  { id: "visionary", name: "Visionary", role: "Innovation & Alternatives", color: "#4A9EFF" },
 ];
 
 const POSITIONS: Record<string, { top: string; left: string }> = {
@@ -62,7 +59,7 @@ export function CouncilChamber({ className }: CouncilChamberProps) {
     >
       {/* Gunungan Background */}
       <img
-        src="https://c.animaapp.com/mrqrcjormMWdDO/img/background-gunungan-illustration.png"
+        src="/img/background-gunungan-illustration.png"
         alt=""
         className="pointer-events-none absolute opacity-60"
         style={{ top: "5%", left: "-35%", width: "163%", aspectRatio: "445/604", zIndex: 0 }}

@@ -4,9 +4,11 @@ import Home from "./pages/Home";
 import Session from "./pages/Session";
 import Sessions from "./pages/Sessions";
 import Placeholder from "./pages/Placeholder";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 export default function App() {
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <Layout>
         <Routes>
@@ -22,5 +24,6 @@ export default function App() {
         </Routes>
       </Layout>
     </BrowserRouter>
+    </ThemeProvider>
   );
 }
