@@ -62,8 +62,6 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen">
-      <div className="aurora-bg pointer-events-none fixed inset-0" />
-
       <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0 }}

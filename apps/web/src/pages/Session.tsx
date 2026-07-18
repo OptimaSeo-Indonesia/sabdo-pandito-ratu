@@ -103,8 +103,7 @@ export default function Session() {
   if (!status && !error) return <LoadingSkeleton />;
 
   return (
-    <div className="aurora-bg relative min-h-screen">
-      <div className="aurora-bg pointer-events-none fixed inset-0" />
+    <div className="relative min-h-screen">
       <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {status && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
