@@ -17,38 +17,34 @@ from core.models import Argument, Perspective
 class OllamaAdapter(InferenceAdapter):
     def __init__(self, adapter_id: str = "") -> None:
         self._base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        self._available_models: list[str] | None = None
+        self._discovered_models: list[str] | None = None
         super().__init__(adapter_id)
 
     def _default_id(self) -> str:
         return "ollama"
 
-    def _ensure_models(self) -> list[str]:
-        if self._available_models is not None:
-            return self._available_models
+    def _discover_models(self) -> None:
+        if self._discovered_models is not None:
+            return
         try:
             import httpx
-            resp = httpx.get(f"{self._base_url}/api/tags", timeout=5)
+            resp = httpx.get(f"{self._base_url}/api/tags", timeout=2)
             if resp.status_code == 200:
                 data = resp.json()
-                self._available_models = [
+                self._discovered_models = [
                     m["name"] for m in data.get("models", [])
                 ]
-            else:
-                self._available_models = ["llama3.1", "qwen2.5"]
         except Exception:
-            self._available_models = ["llama3.1", "qwen2.5"]
-        return self._available_models
+            pass
 
     @property
     def capabilities(self) -> InferenceCapabilities:
-        models = self._ensure_models()
         return InferenceCapabilities(
             supports_structured_output=True,
             supports_streaming=False,
             supports_tools=False,
             context_window=8192,
-            models=models,
+            models=["llama3.1", "qwen2.5"],
             is_local=True,
         )
 
@@ -76,8 +72,8 @@ class OllamaAdapter(InferenceAdapter):
         context: dict,
         model: str | None = None,
     ) -> Perspective:
-        models = self._ensure_models()
-        model = model or (models[0] if models else "llama3.1")
+        self._discover_models()
+        models = self._discovered_models or ["llama3.1", "qwen2.5"]
         prompt = (
             f"{system_prompt}\n\n"
             f"Question: {question}\nContext: {context}\n\n"
@@ -101,8 +97,8 @@ class OllamaAdapter(InferenceAdapter):
         perspectives: list[Perspective],
         model: str | None = None,
     ) -> Argument:
-        models = self._ensure_models()
-        model = model or (models[0] if models else "llama3.1")
+        self._discover_models()
+        models = self._discovered_models or ["llama3.1", "qwen2.5"]
         prompt = (
             f"{system_prompt}\n\n"
             f"Perspectives: {[p.model_dump() for p in perspectives]}\n\n"
@@ -125,8 +121,8 @@ class OllamaAdapter(InferenceAdapter):
         question: str,
         model: str | None = None,
     ) -> dict:
-        models = self._ensure_models()
-        model = model or (models[0] if models else "llama3.1")
+        self._discover_models()
+        models = self._discovered_models or ["llama3.1", "qwen2.5"]
         prompt = (
             f"{system_prompt}\n\n"
             f"Question: {question}\nArguments: {[a.model_dump() for a in arguments]}\n\n"
