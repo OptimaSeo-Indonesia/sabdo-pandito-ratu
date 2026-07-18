@@ -5,8 +5,6 @@ import {
   Scale,
   Shield,
   Eye,
-  Lightbulb,
-  Sparkles,
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
@@ -15,8 +13,11 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
+  Lightbulb,
+  BarChart3,
 } from "lucide-react";
 import type { FullReport, Verdict } from "../../types/api";
+import { useState } from "react";
 
 interface VerdictDashboardProps {
   verdict: Verdict;
@@ -32,14 +33,13 @@ function Gauge({ value, label, color, size = "md" }: { value: number; label: str
           <circle
             cx="50" cy="50" r="42"
             fill="none"
-            stroke="hsl(var(--border))"
+            stroke="rgba(255,255,255,0.1)"
             strokeWidth="6"
-            className="opacity-50"
           />
           <motion.circle
             cx="50" cy="50" r="42"
             fill="none"
-            stroke={`hsl(${color})`}
+            stroke={color}
             strokeWidth="6"
             strokeLinecap="round"
             strokeDasharray={`${2 * Math.PI * 42}`}
@@ -97,15 +97,12 @@ function InsightCard({
 
 function ReasoningTree({
   factors,
-  alternatives,
 }: {
   factors: string[];
-  alternatives: string[];
 }) {
   const [expanded, setExpanded] = useState(true);
 
   const branches = [
-    { label: "Question", icon: Target, children: [] as string[] },
     { label: "Evidence", icon: Scale, children: factors.slice(0, 3) },
     { label: "Assumptions", icon: Eye, children: factors.slice(3, 6) },
     { label: "Conflicts", icon: Shield, children: [] },
@@ -115,10 +112,10 @@ function ReasoningTree({
   ];
 
   return (
-    <div className="glass-card overflow-hidden">
+    <div className="glass-card overflow-hidden rounded-[20px]">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between p-4 transition-colors hover:bg-accent/50"
+        className="flex w-full items-center justify-between p-4 transition-colors hover:bg-white/5"
       >
         <div className="flex items-center gap-2">
           <GitBranch className="h-4 w-4 text-muted-foreground" />
@@ -131,12 +128,12 @@ function ReasoningTree({
         )}
       </button>
       {expanded && (
-        <div className="border-t border-border/50 px-4 pb-4 pt-2">
+        <div className="border-t border-white/10 px-4 pb-4 pt-2">
           <div className="relative pl-6">
-            <div className="absolute bottom-0 left-[7px] top-0 w-px bg-border" />
-            {branches.map((branch, i) => (
+            <div className="absolute bottom-0 left-[7px] top-0 w-px bg-white/10" />
+            {branches.map((branch) => (
               <div key={branch.label} className="relative py-1.5">
-                <div className="absolute -left-[22px] top-[10px] flex h-3 w-3 items-center justify-center rounded-full border border-border bg-card">
+                <div className="absolute -left-[22px] top-[10px] flex h-3 w-3 items-center justify-center rounded-full border border-white/10 bg-white/5">
                   <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
                 </div>
                 <div className="flex items-center gap-2">
@@ -148,10 +145,7 @@ function ReasoningTree({
                 {branch.children.length > 0 && (
                   <div className="mt-1 ml-5 space-y-0.5">
                     {branch.children.map((child) => (
-                      <p
-                        key={child}
-                        className="text-[11px] text-muted-foreground/70"
-                      >
+                      <p key={child} className="text-[11px] text-muted-foreground/70">
                         {child}
                       </p>
                     ))}
@@ -166,156 +160,195 @@ function ReasoningTree({
   );
 }
 
-import { useState, useMemo } from "react";
+function CollapsibleSection({ title, icon: Icon, children, defaultOpen = false }: { title: string; icon: typeof Brain; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="glass-card overflow-hidden rounded-[20px]">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between p-4 transition-colors hover:bg-white/5"
+      >
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">{title}</span>
+        </div>
+        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+      </button>
+      {open && <div className="border-t border-white/10 px-4 pb-4 pt-3">{children}</div>}
+    </div>
+  );
+}
 
 export function VerdictDashboard({ verdict, report }: VerdictDashboardProps) {
   const ws = report.verdict.wisdom_score;
   const overallScore = ws?.overall ?? verdict.wisdom_score ?? 0;
   const confidencePct = Math.round(verdict.confidence * 100);
 
-  const metrics = useMemo(() => {
-    const items = [
-      { icon: Brain, label: "Wisdom Score", value: `${overallScore}/100`, color: "bg-gradient-to-br from-primary to-primary-600" },
-      { icon: TrendingUp, label: "Confidence", value: `${confidencePct}%`, color: "bg-gradient-to-br from-emerald-500 to-teal-600" },
-    ];
-
-    const consensusScore = report.conflicts.length > 0
-      ? Math.max(0, 100 - report.conflicts.length * 15)
-      : 85;
-    items.push({
-      icon: Target,
-      label: "Consensus",
-      value: `${consensusScore}%`,
-      color: "bg-gradient-to-br from-violet-500 to-purple-600",
-    });
-
-    const conflictScore = Math.min(report.conflicts.length * 20, 100);
-    items.push({
-      icon: AlertTriangle,
-      label: "Conflict Level",
-      value: `${conflictScore}%`,
-      color: "bg-gradient-to-br from-amber-500 to-orange-600",
-    });
-
-    items.push({
-      icon: Scale,
-      label: "Ethical Alignment",
-      value: `${Math.round(
-        report.principle_evaluations.reduce((s, p) => s + p.score, 0) /
-          Math.max(report.principle_evaluations.length, 1) *
-          10
-      )}%`,
-      color: "bg-gradient-to-br from-cyan-500 to-blue-600",
-    });
-
-    return items;
-  }, [overallScore, confidencePct, report]);
+  const consensusScore = report.conflicts.length > 0
+    ? Math.max(0, 100 - report.conflicts.length * 15)
+    : 85;
+  const conflictScore = Math.min(report.conflicts.length * 20, 100);
+  const ethicalAlignment = Math.round(
+    report.principle_evaluations.reduce((s, p) => s + p.score, 0) /
+      Math.max(report.principle_evaluations.length, 1) * 10
+  );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="mb-1 flex items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" />
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Executive Intelligence Summary
-          </span>
-        </div>
-        <h2 className="text-2xl font-bold sm:text-3xl">{verdict.decision}</h2>
+    <div className="mx-auto w-full max-w-[1280px]">
+      <div className="mb-1 flex items-center gap-2">
+        <FileText className="h-4 w-4 text-primary" />
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Executive Intelligence Summary
+        </span>
       </div>
+      <h2 className="mb-6 text-2xl font-bold sm:text-3xl">{verdict.decision}</h2>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="glass-card col-span-1 flex items-center justify-center p-6 sm:col-span-2 lg:col-span-1">
-          <div className="flex gap-6">
-            <Gauge value={overallScore} label="Wisdom" color="var(--primary)" />
-            <Gauge value={confidencePct} label="Confidence" color="160 84% 39%" />
-          </div>
-        </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          {/* Executive Summary */}
+          {verdict.summary && (
+            <div className="glass-card rounded-[20px] p-5">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {verdict.summary}
+              </p>
+            </div>
+          )}
 
-        {metrics.map((m, i) => (
-          <InsightCard key={m.label} {...m} index={i} />
-        ))}
-      </div>
+          {/* Reasoning */}
+          <ReasoningTree factors={report.reasoning.key_factors} />
 
-      {verdict.summary && (
-        <div className="glass-card p-5">
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {verdict.summary}
-          </p>
-        </div>
-      )}
-
-      {ws && (
-        <div className="glass-card p-5">
-          <h3 className="mb-4 text-sm font-medium text-muted-foreground">
-            Wisdom Score Dimensions
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {Object.entries(ws)
-              .filter(([k]) => k !== "overall")
-              .map(([key, val]) => (
-                <div key={key}>
-                  <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="capitalize text-muted-foreground">
-                      {key.replace(/_/g, " ")}
-                    </span>
-                    <span className="font-medium tabular-nums">{String(val)}/100</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-border">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${val}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut", delay: 0.5 }}
-                      className="h-full rounded-full bg-gradient-to-r from-primary to-primary-400"
-                    />
-                  </div>
+          {/* Transcript - collapsible sections */}
+          <div className="space-y-3">
+            {report.scenario_explorations.length > 0 && (
+              <CollapsibleSection title="Scenario Explorations" icon={Lightbulb} defaultOpen={false}>
+                <div className="space-y-3">
+                  {report.scenario_explorations.map((s) => (
+                    <div key={s.name} className="border-b border-white/5 pb-2 last:border-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-foreground/80">{s.name}</span>
+                        <span className="text-xs tabular-nums text-muted-foreground">{s.horizon} · {Math.round(s.probability * 100)}%</span>
+                      </div>
+                      {s.assumptions.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {s.assumptions.map((a) => (
+                            <span key={a.description} className="rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                              {a.description}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </CollapsibleSection>
+            )}
+
+            {report.conflicts.length > 0 && (
+              <CollapsibleSection title="Conflicts" icon={Shield} defaultOpen={false}>
+                <div className="space-y-2">
+                  {report.conflicts.map((c) => (
+                    <div key={c.description} className="rounded-lg bg-white/5 p-3">
+                      <div className="flex items-center gap-2 text-xs">
+                        <AlertTriangle className="h-3 w-3 text-amber-400 shrink-0" />
+                        <span className="font-medium text-amber-400/80 capitalize">{c.type.replace(/_/g, " ")}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{c.description}</p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground/60">Between: {c.between.join(", ")}</p>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {report.principle_evaluations.length > 0 && (
+              <CollapsibleSection title="Principle Evaluations" icon={Scale} defaultOpen={false}>
+                <div className="space-y-2">
+                  {report.principle_evaluations.map((p) => (
+                    <div key={p.principle} className="flex items-center justify-between text-xs">
+                      <span className="text-foreground/80 capitalize">{p.principle.replace(/_/g, " ")}</span>
+                      <span className="tabular-nums font-medium">{p.score}/10</span>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {report.alternatives.length > 0 && (
+              <CollapsibleSection title="Alternatives Considered" icon={GitBranch} defaultOpen={false}>
+                <ul className="space-y-2">
+                  {report.alternatives.map((a) => (
+                    <li key={a} className="flex items-start gap-2 text-xs text-foreground/80">
+                      <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-muted-foreground/40" />
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+              </CollapsibleSection>
+            )}
           </div>
         </div>
-      )}
 
-      <ReasoningTree
-        factors={report.reasoning.key_factors}
-        alternatives={report.alternatives || []}
-      />
+        <div className="space-y-6">
+          {/* Confidence & Wisdom gauges */}
+          <div className="glass-card rounded-[20px] p-5">
+            <div className="flex justify-center gap-8">
+              <Gauge value={overallScore} label="Wisdom" color="#4F8CFF" />
+              <Gauge value={confidencePct} label="Confidence" color="#34D399" />
+            </div>
+          </div>
 
-      {report.recommendations.length > 0 && (
-        <div className="glass-card p-5">
-          <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-            Recommended Actions
-          </h3>
-          <ul className="space-y-2">
-            {report.recommendations.map((r) => (
-              <li
-                key={r}
-                className="flex items-start gap-2 text-sm text-foreground/80"
-              >
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                {r}
-              </li>
-            ))}
-          </ul>
+          {/* Wisdom dimensions */}
+          {ws && (
+            <div className="glass-card rounded-[20px] p-5">
+              <h3 className="mb-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Wisdom Dimensions
+              </h3>
+              <div className="space-y-3">
+                {Object.entries(ws)
+                  .filter(([k]) => k !== "overall")
+                  .map(([key, val]) => (
+                    <div key={key}>
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="capitalize text-muted-foreground">{key.replace(/_/g, " ")}</span>
+                        <span className="font-medium tabular-nums">{String(val)}/100</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${val}%` }}
+                          transition={{ duration: 0.8, ease: "easeOut", delay: 0.5 }}
+                          className="h-full rounded-full bg-gradient-to-r from-primary to-primary-400"
+                        />
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Metrics */}
+          <InsightCard icon={Target} label="Consensus" value={`${consensusScore}%`} color="bg-gradient-to-br from-violet-500 to-purple-600" index={0} />
+          <InsightCard icon={AlertTriangle} label="Conflict Level" value={`${conflictScore}%`} color="bg-gradient-to-br from-amber-500 to-orange-600" index={1} />
+          <InsightCard icon={Scale} label="Ethical Alignment" value={`${ethicalAlignment}%`} color="bg-gradient-to-br from-cyan-500 to-blue-600" index={2} />
+
+          {/* Recommendations */}
+          {report.recommendations.length > 0 && (
+            <div className="glass-card rounded-[20px] p-5">
+              <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Recommendations
+              </h3>
+              <ul className="space-y-2">
+                {report.recommendations.map((r) => (
+                  <li key={r} className="flex items-start gap-2 text-xs text-foreground/80">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-      )}
-
-      {report.alternatives.length > 0 && (
-        <div className="glass-card p-5">
-          <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-            Alternative Decisions
-          </h3>
-          <ul className="space-y-2">
-            {report.alternatives.map((a) => (
-              <li
-                key={a}
-                className="flex items-start gap-2 text-sm text-foreground/80"
-              >
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
-                {a}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
