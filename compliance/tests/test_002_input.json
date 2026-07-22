@@ -1,0 +1,19 @@
+{
+  "claims": [
+    {
+      "id": "c001",
+      "text": "Solar power reduces carbon emissions significantly.",
+      "source_advisor_id": "ra_001",
+      "source_persona": "rational_analyst",
+      "confidence": 0.85
+    },
+    {
+      "id": "c002",
+      "text": "Solar costs dropped 90% in the last decade.",
+      "source_advisor_id": "ra_001",
+      "source_persona": "rational_analyst",
+      "confidence": 0.92
+    }
+  ],
+  "evidence": []
+}

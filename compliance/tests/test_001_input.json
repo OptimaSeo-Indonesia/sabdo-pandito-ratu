@@ -1,0 +1,30 @@
+{
+  "claims": [
+    {
+      "id": "c001",
+      "text": "Solar power reduces carbon emissions significantly.",
+      "source_advisor_id": "ra_001",
+      "source_persona": "rational_analyst",
+      "confidence": 0.85
+    },
+    {
+      "id": "c002",
+      "text": "Solar costs dropped 90% in the last decade.",
+      "source_advisor_id": "ra_001",
+      "source_persona": "rational_analyst",
+      "confidence": 0.92
+    }
+  ],
+  "evidence": [
+    {
+      "id": "e001",
+      "text": "IEA 2025: Solar power adoption reduces carbon emissions by 40%.",
+      "source_ref": "IEA Renewables 2025"
+    },
+    {
+      "id": "e002",
+      "text": "IRENA 2024: Solar PV costs declined by 90% since 2010.",
+      "source_ref": "IRENA cost study 2024"
+    }
+  ]
+}

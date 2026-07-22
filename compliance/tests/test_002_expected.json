@@ -1,0 +1,16 @@
+{
+  "results": [
+    {
+      "claim_id": "c001",
+      "status": "unsupported",
+      "support_ratio": 0.0,
+      "matched_evidence": []
+    },
+    {
+      "claim_id": "c002",
+      "status": "unsupported",
+      "support_ratio": 0.0,
+      "matched_evidence": []
+    }
+  ]
+}

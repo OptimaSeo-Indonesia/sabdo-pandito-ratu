@@ -1,0 +1,30 @@
+{
+  "claims": [
+    {
+      "id": "c001",
+      "text": "The moon is made of cheese.",
+      "source_advisor_id": "creative_01",
+      "source_persona": "creative_thinker",
+      "confidence": 0.2
+    },
+    {
+      "id": "c002",
+      "text": "Pancakes are the best breakfast food.",
+      "source_advisor_id": "creative_01",
+      "source_persona": "creative_thinker",
+      "confidence": 0.4
+    }
+  ],
+  "evidence": [
+    {
+      "id": "e001",
+      "text": "Moon rocks brought by Apollo missions are composed of basalt.",
+      "source_ref": "NASA Apollo program"
+    },
+    {
+      "id": "e002",
+      "text": "Breakfast cereal consumption has declined 15% since 2020.",
+      "source_ref": "USDA breakfast report 2024"
+    }
+  ]
+}

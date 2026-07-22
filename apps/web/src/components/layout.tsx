@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
 import {
@@ -8,10 +8,10 @@ import {
   Users,
   BookOpen,
   BarChart3,
-  Settings,
-  FileText,
   Heart,
   Astroid,
+  Menu,
+  X,
 } from "lucide-react";
 
 const SIDEBAR_ITEMS = [
@@ -21,71 +21,94 @@ const SIDEBAR_ITEMS = [
   { to: "/council", label: "Council", icon: Users, match: (p: string) => p.startsWith("/council") },
   { to: "/knowledge", label: "Knowledge", icon: BookOpen, match: (p: string) => p.startsWith("/knowledge") },
   { to: "/analytics", label: "Analytics", icon: BarChart3, match: (p: string) => p.startsWith("/analytics") },
-  { to: "/settings", label: "Settings", icon: Settings, match: (p: string) => p.startsWith("/settings") },
-  { to: "/docs", label: "Documentation", icon: FileText, match: (p: string) => p.startsWith("/docs") },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const mainRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="relative z-10 flex h-screen flex-col bg-[#03030e] text-foreground">
-      <div className="flex flex-1 overflow-hidden">
-        <aside className="flex w-[240px] min-w-[240px] shrink-0 flex-col bg-sidebar py-5 px-3 overflow-hidden">
-          <Link to="/" className="flex flex-col items-start gap-1 px-4 mb-6">
-            <img
-              src="/img/brand-logo-gunungan.png"
-              alt="Sabdo Pandito Ratu"
-              className="h-12 w-auto"
-            />
+    <div className="relative z-10 flex h-screen flex-col bg-background text-foreground">
+
+      {/* Hamburger menu button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="fixed top-4 left-4 z-40 flex h-9 w-9 items-center justify-center rounded-xl bg-card card-ref border border-white/10 text-muted hover:text-foreground transition-colors"
+      >
+        {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+      </button>
+
+      {/* Sidebar drawer */}
+      <aside
+        className={cn(
+          "fixed top-0 left-0 z-30 flex h-full flex-col bg-sidebar py-5 transition-all duration-300 w-[280px] px-4",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Brand */}
+        <div className="flex items-center gap-3 px-1 mb-8 mt-14">
+          <img
+            src="/img/brand-logo-gunungan.png"
+            alt="Sabdo Pandito Ratu"
+            className="h-9 w-auto shrink-0"
+          />
+          <div className="flex flex-col">
             <span className="text-sm font-bold text-foreground leading-tight">Sabdo Pandito Ratu</span>
             <span className="text-[10px] text-muted leading-tight">Multi-AI Deliberation Engine</span>
-          </Link>
-
-          <nav className="flex flex-col gap-0">
-            {SIDEBAR_ITEMS.map((item) => {
-              const isActive = item.match(location.pathname);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-[10px] rounded-[10px] text-sm font-medium transition-all",
-                    isActive
-                      ? "bg-grad-active-nav border border-[rgba(108,99,255,0.55)] text-foreground"
-                      : "text-muted hover:text-foreground hover:bg-[rgba(108,99,255,0.06)]"
-                  )}
-                >
-                  <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted")} />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="mt-auto px-1">
-            <div className="bg-card card-ref rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <img
-                  src="/img/council-core-emblem.png"
-                  alt=""
-                  className="w-4 h-4 object-contain"
-                />
-                <p className="text-xs text-muted">Wisdom Today</p>
-              </div>
-              <p className="text-lg font-bold text-foreground">3</p>
-              <p className="text-[11px] text-muted">Deliberations</p>
-              <div className="mt-2 h-[3px] rounded-full bg-progress-track overflow-hidden">
-                <div className="h-full w-[91%] rounded-full bg-grad-primary-btn" />
-              </div>
-              <p className="mt-1 text-[11px] text-muted">91% Avg. Wisdom Score</p>
-            </div>
           </div>
-        </aside>
+        </div>
 
-        <main className="flex flex-1 flex-col overflow-y-auto">
-          <div className="container-app flex flex-1 flex-col gap-6 py-6">
+        {/* Navigation */}
+        <nav className="flex flex-col gap-1">
+          {SIDEBAR_ITEMS.map((item) => {
+            const isActive = item.match(location.pathname);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-[10px] rounded-[10px] text-sm font-medium transition-all",
+                  isActive
+                    ? "bg-grad-active-nav border border-[rgba(108,99,255,0.55)] text-foreground"
+                    : "text-muted hover:text-foreground hover:bg-[rgba(108,99,255,0.08)]"
+                )}
+              >
+                <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted")} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Wisdom Today */}
+        <div className="mt-auto px-1">
+          <div className="bg-card card-ref rounded-2xl p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <img
+                src="/img/council-core-emblem.png"
+                alt=""
+                className="w-8 h-8 object-contain"
+              />
+              <p className="text-xs text-muted">Wisdom Today</p>
+            </div>
+            <p className="text-lg font-bold text-accent">3 <span className="text-[11px] font-normal text-muted">Deliberations</span></p>
+            <div className="mt-2 h-[3px] rounded-full bg-progress-track overflow-hidden max-w-[90%] mx-auto">
+              <div className="h-full w-[91%] rounded-full bg-grad-primary-btn" />
+            </div>
+            <p className="mt-1 text-[11px] text-accent">91% Avg. Wisdom Score</p>
+          </div>
+        </div>
+      </aside>
+
+      <div className="flex flex-1 overflow-hidden">
+        <main ref={mainRef} className="flex flex-1 flex-col overflow-y-auto">
+          <div className="container-app flex flex-1 flex-col gap-6 px-4 lg:px-6 pb-4 pt-5">
             {children}
           </div>
         </main>

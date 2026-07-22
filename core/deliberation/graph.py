@@ -31,12 +31,14 @@ from core.models import (
 from core.principles.engine import PrincipleEngine
 from core.principles.profiles import PrincipleProfileManager
 from core.simulation.simulator import ScenarioExplorer
+from core.verification.engine import EvidenceVerifier, StructuralEvidenceVerifier
 
 logger = logging.getLogger(__name__)
 
 STEP_NAMES = [
     "analyze_context",
     "generate_perspectives",
+    "evidence_verification",
     "collect_arguments",
     "resolve_conflicts",
     "evaluate_principles",
@@ -45,6 +47,8 @@ STEP_NAMES = [
     "score_wisdom",
     "generate_verdict",
 ]
+
+TOTAL_STEPS = len(STEP_NAMES)
 
 
 class DeliberationGraph:
@@ -81,12 +85,24 @@ class DeliberationGraph:
         )
         self._has_adapters = bool(self._inference_registry.list_available())
         self.graph = self._build()
+        self._ev_verifier: EvidenceVerifier | None = None
+
+    @property
+    def ev_verifier(self) -> EvidenceVerifier:
+        if self._ev_verifier is None:
+            self._ev_verifier = StructuralEvidenceVerifier()
+        return self._ev_verifier
+
+    @ev_verifier.setter
+    def ev_verifier(self, verifier: EvidenceVerifier) -> None:
+        self._ev_verifier = verifier
 
     def _build(self) -> StateGraph:
         workflow = StateGraph(DeliberationState)
 
         workflow.add_node("analyze_context", self._step_analyze_context)
         workflow.add_node("generate_perspectives", self._step_perspectives)
+        workflow.add_node("evidence_verification", self._step_evidence_verification)
         workflow.add_node("collect_arguments", self._step_arguments)
         workflow.add_node("resolve_conflicts", self._step_conflicts)
         workflow.add_node("evaluate_principles", self._step_principles)
@@ -97,7 +113,8 @@ class DeliberationGraph:
 
         workflow.set_entry_point("analyze_context")
         workflow.add_edge("analyze_context", "generate_perspectives")
-        workflow.add_edge("generate_perspectives", "collect_arguments")
+        workflow.add_edge("generate_perspectives", "evidence_verification")
+        workflow.add_edge("evidence_verification", "collect_arguments")
         workflow.add_edge("collect_arguments", "resolve_conflicts")
         workflow.add_edge("resolve_conflicts", "evaluate_principles")
         workflow.add_edge("evaluate_principles", "explore_scenarios")
@@ -125,9 +142,9 @@ class DeliberationGraph:
         completed = len([s for s in steps if s.status == "completed"])
         return {
             "steps": [s.model_dump() for s in steps],
-            "current_step": name if completed < 9 else None,
+            "current_step": name if completed < TOTAL_STEPS else None,
             "steps_completed": completed,
-            "steps_total": 9,
+            "steps_total": TOTAL_STEPS,
             "events": list(state.events) + [
                 {"type": "step_start", "step": name, "timestamp": now.isoformat()},
                 {"type": "step_complete", "step": name, "timestamp": now.isoformat()},
@@ -266,6 +283,24 @@ class DeliberationGraph:
             assumptions=[],
         )
         responses.append(response)
+
+    async def _step_evidence_verification(self, state: DeliberationState) -> dict:
+        step_updates = self._track_step(state, "evidence_verification")
+        from core.models import AdvisorResponse as AR
+        responses = [AR(**r) if isinstance(r, dict) else r for r in state.advisor_responses]
+        verifier = self.ev_verifier
+        claims = verifier.extract_claims(responses)
+        evidence = verifier.extract_evidence(responses)
+        results = verifier.verify(claims, evidence)
+        contradictions = verifier.detect_contradictions(results)
+        return {
+            **step_updates,
+            "status": SessionStatus.VERIFYING_EVIDENCE,
+            "claims": [c.model_dump() for c in claims],
+            "evidence_list": [e.model_dump() for e in evidence],
+            "verification_results": [r.model_dump() for r in results],
+            "contradictions": [c.model_dump() for c in contradictions],
+        }
 
     async def _step_arguments(self, state: DeliberationState) -> dict:
         step_updates = self._track_step(state, "collect_arguments")

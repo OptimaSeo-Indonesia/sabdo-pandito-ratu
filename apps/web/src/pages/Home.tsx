@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { startDeliberation, startDryRun } from "../lib/api";
 import { cn } from "../lib/utils";
 import { CouncilChamber } from "../components/council/CouncilChamber";
@@ -11,9 +11,13 @@ import {
   Upload,
   Mic,
   Lightbulb,
-  LayoutGrid,
-  List,
   Loader2,
+  ChevronDown,
+  PanelRight,
+  Settings,
+  FileText,
+  LogOut,
+  LogIn,
 } from "lucide-react";
 
 const EXAMPLE_PROMPTS = [
@@ -49,7 +53,33 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useDryRun, setUseDryRun] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem("loggedIn") === "true");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const [col3Open, setCol3Open] = useState(false);
+
+  function handleLogin() {
+    setIsLoggedIn(true);
+    localStorage.setItem("loggedIn", "true");
+    setProfileOpen(false);
+  }
+
+  function handleLogout() {
+    setIsLoggedIn(false);
+    localStorage.removeItem("loggedIn");
+    setProfileOpen(false);
+  }
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    if (profileOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [profileOpen]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,47 +100,18 @@ export default function Home() {
   return (
     <>
       {/* 3-Column Layout */}
-      <div className="flex flex-1 gap-6 overflow-hidden" style={{ minHeight: 0 }}>
+      <div className="flex flex-1 gap-6 overflow-hidden relative" style={{ minHeight: 0 }}>
         {/* Column 2: Council + Chat */}
-        <div className="flex flex-1 flex-col gap-6 overflow-auto">
-          {/* Header Hero */}
-          <div className="flex items-start justify-between shrink-0">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-5xl font-bold leading-[1.05] tracking-tight">
+        <div className="flex flex-1 flex-col" style={{ minHeight: 0 }}>
+          {/* Scrollable content */}
+          <div className="flex-1 flex flex-col gap-3 overflow-auto pr-1">
+            {/* Topbar 2 — Header Hero */}
+            <div className="flex flex-col shrink-0 text-center">
+              <h1 className="text-xl font-bold tracking-tight">
                 Sabdo{" "}
                 <span className="text-gradient-brand">Pandito Ratu</span>
               </h1>
-              <p className="text-accent font-semibold text-xl">
-                Multi-AI Deliberation Engine
-              </p>
-              <p className="text-muted text-sm leading-6 max-w-[320px]">
-                Multiple AI advisors analyze, debate, reflect, and produce transparent decisions.
-              </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center rounded-[10px] bg-button-secondary p-1 gap-0">
-                <button className="flex items-center justify-center h-8 w-8 rounded-md bg-background text-foreground">
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-                <button className="flex items-center justify-center h-8 w-8 rounded-md text-muted hover:text-foreground">
-                  <List className="h-4 w-4" />
-                </button>
-              </div>
-              <ThemeToggle />
-              <div className="flex items-center gap-2 bg-topbar-chip rounded-[10px] px-3 py-1.5">
-                <div className="h-6 w-6 rounded-full bg-grad-primary-btn flex items-center justify-center text-[10px] font-bold text-white">
-                  PU
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-foreground leading-tight">Pandita Utama</p>
-                  <p className="text-[10px] text-muted leading-tight">Admin</p>
-                </div>
-                <span className="ml-1 text-[9px] font-bold uppercase text-white bg-grad-primary-btn rounded-md px-1.5 py-0.5 leading-normal">
-                  Pro
-                </span>
-              </div>
-            </div>
-          </div>
 
           {/* Council Diagram */}
           <CouncilChamber />
@@ -144,24 +145,21 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs text-muted"
-                    style={{ backgroundColor: "#111633", border: "1px solid rgba(255,255,255,0.08)" }}
+                    className="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs text-muted bg-button-secondary border border-white/[0.06]"
                   >
                     <Upload className="h-3.5 w-3.5" />
                     Upload Context
                   </button>
                   <button
                     type="button"
-                    className="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs text-muted"
-                    style={{ backgroundColor: "#111633", border: "1px solid rgba(255,255,255,0.08)" }}
+                    className="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs text-muted bg-button-secondary border border-white/[0.06]"
                   >
                     <Mic className="h-3.5 w-3.5" />
                     Voice Input
                   </button>
                   <button
                     type="button"
-                    className="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs text-muted"
-                    style={{ backgroundColor: "#111633", border: "1px solid rgba(255,255,255,0.08)" }}
+                    className="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs text-muted bg-button-secondary border border-white/[0.06]"
                   >
                     <Lightbulb className="h-3.5 w-3.5" />
                     Suggested Prompts
@@ -177,8 +175,10 @@ export default function Home() {
                       className="sr-only"
                     />
                     <div
-                      className="flex h-5 w-9 rounded-full items-center px-0.5 transition-colors"
-                      style={{ backgroundColor: useDryRun ? "#6C63FF" : "#1A1F36" }}
+                      className={cn(
+                        "flex h-5 w-9 rounded-full items-center px-0.5 transition-colors",
+                        useDryRun ? "bg-primary" : "bg-muted/20"
+                      )}
                     >
                       <div
                         className={cn(
@@ -214,58 +214,133 @@ export default function Home() {
               )}
             </form>
           </section>
-        </div>
+          </div>
 
-        {/* Column 3: Status Panel - 380px */}
-        <div className="flex w-[380px] shrink-0 flex-col gap-6 overflow-auto">
-          {/* Deliberation Progress */}
-          <section className="bg-card card-ref rounded-2xl p-4 flex flex-col gap-0">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-base font-semibold text-foreground">
-                Deliberation Progress
-              </span>
-              <span className="flex items-center gap-1 text-[11px] font-medium text-success">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-                </span>
-                Live
-              </span>
-            </div>
-
-            <DeliberationTimeline steps={DELIBERATION_STEPS} />
-          </section>
-
-          {/* Council Status */}
-          <section className="bg-card card-ref rounded-[18px] p-4">
-            <h2 className="text-base font-semibold text-foreground mb-4">
-              Council Status
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              {ADVISOR_STATUSES.map((a) => {
-                return (
-                  <div key={a.id} className="flex items-start gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${a.bgClass}`}>
-                      <AdvisorIcon id={a.id} size={18} className={a.iconColor} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-foreground leading-tight">{a.name}</p>
-                      <p className="text-[10px] text-muted leading-tight truncate">{a.desc}</p>
-                      <div className="mt-1 flex items-center gap-1.5">
-                        <div className="flex-1 h-[3px] rounded-full bg-progress-track overflow-hidden">
-                          <div className={`h-full rounded-full ${a.barGradient}`} style={{ width: `${a.pct}%` }} />
-                        </div>
-                        <span className="text-[10px] text-muted font-medium shrink-0">{a.pct}%</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
+          {/* Sticky subtitle footer */}
+          <div className="shrink-0 text-center py-3">
+            <p className="text-accent font-semibold text-sm">
+              Multi-AI Deliberation Engine
+            </p>
+            <p className="text-muted text-xs leading-5">
+              Multiple AI advisors analyze, debate, reflect, and produce transparent decisions.
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Right panel toggle */}
+      <button
+        onClick={() => setCol3Open(!col3Open)}
+        className="fixed top-4 right-4 z-40 flex h-9 w-9 items-center justify-center rounded-xl bg-card card-ref border border-white/10 text-muted hover:text-foreground transition-colors"
+      >
+        <PanelRight className="h-4 w-4" />
+      </button>
+
+      {/* Column 3: Right drawer */}
+      <aside
+        className={`fixed top-0 right-0 z-30 flex h-full w-[380px] flex-col gap-6 overflow-auto bg-sidebar py-5 px-4 transition-all duration-300 ${col3Open ? "translate-x-0" : "translate-x-full"}`}
+      >
+        {/* Profile */}
+        <section className="bg-card card-ref rounded-2xl p-3 flex items-center justify-between gap-2">
+          <ThemeToggle />
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen(!profileOpen)}
+              className="flex items-center gap-1.5"
+            >
+              <span className="text-sm font-semibold text-foreground leading-tight">Pandita Utama</span>
+              <span className="text-[10px] font-bold uppercase text-white bg-grad-primary-btn rounded-md px-1.5 py-0.5 leading-normal">
+                Pro
+              </span>
+              <ChevronDown className={`h-3.5 w-3.5 text-muted transition-transform ${profileOpen ? "rotate-180" : ""}`} />
+            </button>
+            {profileOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-card card-ref rounded-xl p-2 shadow-xl z-50 border border-white/10">
+                <Link
+                  to="/settings"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-[rgba(108,99,255,0.08)] transition-colors"
+                  onClick={() => setProfileOpen(false)}
+                >
+                  <Settings className="h-4 w-4 text-muted" />
+                  Settings
+                </Link>
+                <Link
+                  to="/docs"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-[rgba(108,99,255,0.08)] transition-colors"
+                  onClick={() => setProfileOpen(false)}
+                >
+                  <FileText className="h-4 w-4 text-muted" />
+                  Documentation
+                </Link>
+                <hr className="my-1 border-white/10" />
+                {isLoggedIn ? (
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-danger/10 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleLogin}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-[rgba(108,99,255,0.08)] transition-colors"
+                  >
+                    <LogIn className="h-4 w-4 text-muted" />
+                    Login
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Deliberation Progress */}
+        <section className="bg-card card-ref rounded-2xl p-4 flex flex-col gap-0">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-base font-semibold text-foreground">
+              Deliberation Progress
+            </span>
+            <span className="flex items-center gap-1 text-[11px] font-medium text-success">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+              Live
+            </span>
+          </div>
+
+          <DeliberationTimeline steps={DELIBERATION_STEPS} />
+        </section>
+
+        {/* Council Status */}
+        <section className="bg-card card-ref rounded-[18px] p-4">
+          <h2 className="text-base font-semibold text-foreground mb-4">
+            Council Status
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            {ADVISOR_STATUSES.map((a) => {
+              return (
+                <div key={a.id} className="flex items-start gap-2">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${a.bgClass}`}>
+                    <AdvisorIcon id={a.id} size={18} className={a.iconColor} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-foreground leading-tight">{a.name}</p>
+                    <p className="text-[10px] text-muted leading-tight truncate">{a.desc}</p>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <div className="flex-1 h-[3px] rounded-full bg-progress-track overflow-hidden">
+                        <div className={`h-full rounded-full ${a.barGradient}`} style={{ width: `${a.pct}%` }} />
+                      </div>
+                      <span className="text-[10px] text-muted font-medium shrink-0">{a.pct}%</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </aside>
     </>
   );
 }

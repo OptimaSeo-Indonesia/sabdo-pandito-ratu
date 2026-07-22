@@ -1,0 +1,37 @@
+{
+  "claims": [
+    {
+      "id": "c001",
+      "text": "Electric vehicles reduce carbon emissions.",
+      "source_advisor_id": "ra_002",
+      "source_persona": "rational_analyst",
+      "confidence": 0.9
+    },
+    {
+      "id": "c002",
+      "text": "The sky appears blue due to Rayleigh scattering.",
+      "source_advisor_id": "ra_002",
+      "source_persona": "rational_analyst",
+      "confidence": 0.95
+    },
+    {
+      "id": "c003",
+      "text": "Chocolate milk comes from brown cows.",
+      "source_advisor_id": "creative_02",
+      "source_persona": "creative_thinker",
+      "confidence": 0.1
+    }
+  ],
+  "evidence": [
+    {
+      "id": "e001",
+      "text": "EVs produce 40% fewer carbon emissions over their lifecycle.",
+      "source_ref": "EPA emissions analysis 2025"
+    },
+    {
+      "id": "e002",
+      "text": "Rayleigh scattering causes shorter wavelengths to scatter more.",
+      "source_ref": "Physics of light"
+    }
+  ]
+}

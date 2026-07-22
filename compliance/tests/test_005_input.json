@@ -1,0 +1,10 @@
+{
+  "claims": [],
+  "evidence": [
+    {
+      "id": "e001",
+      "text": "Some data exists.",
+      "source_ref": "Some source"
+    }
+  ]
+}

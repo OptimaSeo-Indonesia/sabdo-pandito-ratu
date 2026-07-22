@@ -22,7 +22,7 @@ export function AdvisorNode({ advisor, style }: AdvisorNodeProps) {
             width: "72px",
             height: "72px",
             border: `2px solid ${alpha(color)}`,
-            background: `radial-gradient(circle at 40% 35%, ${alpha(color)} 0%, rgba(3,7,22,0.9) 70%)`,
+            background: `radial-gradient(circle at 40% 35%, ${alpha(color)} 0%, hsl(var(--background) / 0.9) 70%)`,
           }}
         >
           <AdvisorIcon id={advisor.id} size={32} color={color} />

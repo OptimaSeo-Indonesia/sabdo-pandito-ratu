@@ -12,7 +12,7 @@ export function CouncilCore({ style }: CouncilCoreProps) {
             width: "140px",
             height: "140px",
             border: "1.5px solid rgba(108, 99, 255, 0.5)",
-            background: "radial-gradient(circle at 40% 35%, rgba(108,99,255,0.25) 0%, rgba(3,7,22,0.95) 70%)",
+            background: "radial-gradient(circle at 40% 35%, rgba(108,99,255,0.25) 0%, hsl(var(--background) / 0.95) 70%)",
             boxShadow: "0 0 30px rgba(108,99,255,0.35), 0 0 60px rgba(108,99,255,0.15)",
           }}
         >

@@ -135,7 +135,7 @@ export function CouncilChamber({ className }: CouncilChamberProps) {
         <CouncilCore
           style={{
             position: "absolute",
-            top: "22.6%",
+            top: "44%",
             left: "50%",
             transform: "translate(-50%, -50%)",
             zIndex: 20,

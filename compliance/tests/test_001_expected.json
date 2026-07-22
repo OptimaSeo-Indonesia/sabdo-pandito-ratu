@@ -1,0 +1,14 @@
+{
+  "results": [
+    {
+      "claim_id": "c001",
+      "status": "verified",
+      "matched_evidence": ["IEA Renewables 2025"]
+    },
+    {
+      "claim_id": "c002",
+      "status": "verified",
+      "matched_evidence": ["IRENA cost study 2024"]
+    }
+  ]
+}

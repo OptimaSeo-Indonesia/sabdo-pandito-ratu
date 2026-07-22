@@ -15,6 +15,7 @@ class SessionStatus(str, Enum):
     PENDING = "pending"
     ANALYZING_CONTEXT = "analyzing_context"
     GENERATING_PERSPECTIVES = "generating_perspectives"
+    VERIFYING_EVIDENCE = "verifying_evidence"
     COLLECTING_ARGUMENTS = "collecting_arguments"
     RESOLVING_CONFLICTS = "resolving_conflicts"
     EVALUATING_PRINCIPLES = "evaluating_principles"
@@ -179,6 +180,61 @@ class AdvisorResponse(BaseModel):
     assumptions: list[str] = Field(default_factory=list)
 
 
+# ─── Evidence Verification ─────────────────────────────────────
+
+class VerificationStatus(str, Enum):
+    VERIFIED = "verified"
+    UNSUPPORTED = "unsupported"
+    CONTRADICTED = "contradicted"
+    UNCERTAIN = "uncertain"
+
+
+class Claim(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    text: str
+    source_advisor_id: str
+    source_persona: AdvisorPersona
+    confidence: float = Field(default=0.5, ge=0, le=1)
+    extracted_entities: list[str] = Field(default_factory=list)
+    parent_response_id: str = ""
+
+
+class Evidence(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    text: str
+    source_ref: str = ""
+    source_type: str = "unknown"  # data_source, advisor_reasoning, external
+    provider: str = ""
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class ProvenanceRecord(BaseModel):
+    claim_id: str
+    evidence_id: str
+    match_type: str = "unknown"  # keyword, semantic, llm_assisted
+    match_score: float = Field(default=0.0, ge=0, le=1)
+    verified_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class VerificationResult(BaseModel):
+    claim_id: str
+    status: VerificationStatus
+    support_ratio: float = Field(default=0.0, ge=0, le=1)
+    provenance: list[ProvenanceRecord] = Field(default_factory=list)
+    matched_evidence: list[str] = Field(default_factory=list)
+    unmatched_evidence: list[str] = Field(default_factory=list)
+    confidence: float = Field(default=0.0, ge=0, le=1)
+
+
+class Contradiction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    claim_a_id: str
+    claim_b_id: str
+    entities: list[str] = Field(default_factory=list)
+    description: str = ""
+    severity: str = "medium"  # low, medium, high
+
+
 class Argument(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     advisor_id: str
@@ -308,10 +364,14 @@ class DeliberationState(BaseModel):
     steps: list[DeliberationStep] = Field(default_factory=list)
     current_step: str | None = None
     steps_completed: int = 0
-    steps_total: int = 9
+    steps_total: int = 10
     events: list[dict] = Field(default_factory=list)
     context_analysis: ContextAnalysis | None = None
     advisor_responses: list[AdvisorResponse] = Field(default_factory=list)
+    claims: list[Claim] = Field(default_factory=list)
+    evidence_list: list[Evidence] = Field(default_factory=list)
+    verification_results: list[VerificationResult] = Field(default_factory=list)
+    contradictions: list[Contradiction] = Field(default_factory=list)
     arguments: list[Argument] = Field(default_factory=list)
     conflicts: list[Conflict] = Field(default_factory=list)
     principle_evaluations: list[PrincipleEvaluation] = Field(default_factory=list)
